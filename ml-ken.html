@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML-KEM (FIPS 203) - Explicação Completa</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #f0f4f8;
+            --text: #333;
+            --code-bg: #2d2d2d;
+            --code-text: #e0e0e0;
+            --accent: #d63384;
+            --border: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            background-color: #fafafa;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            background-color: #e9ecef;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-button {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .tab-button:hover {
+            background-color: rgba(0, 86, 179, 0.1);
+            color: var(--primary);
+        }
+
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            background-color: white;
+        }
+
+        /* Sub-Tabs for Visualization */
+        .sub-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sub-tab-button {
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #555;
+            border-radius: 4px 4px 0 0;
+            border-bottom: 2px solid transparent;
+        }
+
+        .sub-tab-button:hover {
+            color: var(--primary);
+            background-color: #f8f9fa;
+        }
+
+        .sub-tab-button.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+        }
+
+        .sub-tab-content, .lwe-sub-tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .sub-tab-content.active, .lwe-sub-tab-content.active {
+            display: block;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 2rem;
+            animation: fadeIn 0.4s ease;
+            padding-bottom: 4rem; /* Space for audio button */
+            position: relative;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Typography & Components */
+        h2 {
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        h3 {
+            color: #444;
+            margin-top: 1.5rem;
+        }
+
+        .math-block {
+            background-color: var(--secondary);
+            padding: 1rem;
+            border-left: 4px solid var(--primary);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .var {
+            font-style: italic;
+            font-family: 'Times New Roman', serif;
+            font-weight: bold;
+        }
+
+        .keyword {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--secondary);
+        }
+
+        /* Algorithm Steps */
+        .algo-steps {
+            list-style: none;
+            padding: 0;
+        }
+
+        .algo-steps li {
+            background: white;
+            border: 1px solid var(--border);
+            margin-bottom: 0.5rem;
+            padding: 1rem;
+            border-radius: 4px;
+            position: relative;
+            padding-left: 3rem;
+        }
+
+        .algo-steps li::before {
+            content: counter(step-counter);
+            counter-increment: step-counter;
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2.5rem;
+            background-color: var(--secondary);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-right: 1px solid var(--border);
+        }
+
+        ol {
+            counter-reset: step-counter;
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .tab-button {
+                width: 100%;
+                border-bottom: 1px solid var(--border);
+            }
+            .tab-button.active {
+                border-bottom: 3px solid var(--primary);
+            }
+        }
+
+        /* Visualização de Matrizes */
+        .matrix-equation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .matrix-wrapper {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .matrix-label {
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .matrix-desc {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .matrix-container {
+            display: grid;
+            gap: 4px;
+            padding: 8px;
+            background: white;
+            position: relative;
+            /* Brackets styling handled by pseudo-elements below */
+        }
+
+        /* Brackets effect for matrices/vectors */
+        .matrix-bracket {
+            position: relative;
+            padding: 0 6px;
+        }
+        .matrix-bracket::before, .matrix-bracket::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            border: 2px solid #333;
+        }
+        .matrix-bracket::before {
+            left: 0;
+            border-right: none;
+        }
+        .matrix-bracket::after {
+            right: 0;
+            border-left: none;
+        }
+
+        .k-2.matrix-container { grid-template-columns: repeat(2, 1fr); }
+        .k-3.matrix-container { grid-template-columns: repeat(3, 1fr); }
+        .k-4.matrix-container { grid-template-columns: repeat(4, 1fr); }
+        
+        .lwe-matrix { grid-template-columns: repeat(3, 1fr); }
+        .lwe-vector { grid-template-columns: 1fr; }
+        
+        .vector-container { grid-template-columns: 1fr; }
+
+        .poly-cell {
+            background: #e9ecef;
+            padding: 0;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 35px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+        }
+        
+        .num-cell {
+            background: #e9ecef;
+            padding: 0;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+        }
+
+        /* Cores específicas para diferenciar os componentes */
+        .poly-cell.secret, .num-cell.secret { 
+            background: #ffe3e3; 
+            border: 1px dashed #d63384; 
+            color: #a00;
+        }
+        .poly-cell.noise, .num-cell.noise { 
+            background: #fff3cd; 
+            border: 1px dashed #ffc107; 
+            color: #856404;
+        }
+        .poly-cell.public, .num-cell.public {
+            background: #d1e7dd;
+            border: 1px solid #198754;
+            color: #0f5132;
+        }
+
+        .operator {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 2px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .evolution-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .evolution-title {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        .equation-display {
+            font-size: 1.2rem;
+            text-align: center;
+            margin: 1.5rem 0;
+            font-family: 'Times New Roman', serif;
+        }
+
+        /* Audio Player Styling */
+        .audio-control {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .audio-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: background 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .audio-btn:hover {
+            background-color: #004494;
+        }
+
+        .audio-btn:active {
+            transform: translateY(1px);
+        }
+
+        .audio-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .speaking {
+            background-color: var(--accent) !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(214, 51, 132, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(214, 51, 132, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(214, 51, 132, 0); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>ML-KEM (FIPS 203)</h1>
+    <p>Padrão de Mecanismo de Encapsulamento de Chaves Baseado em Reticulados de Módulos</p>
+</header>
+
+<div class="container">
+    <nav class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'lwe_evolution')">1. Evolução LWE</button>
+        <button class="tab-button" onclick="openTab(event, 'intro')">2. Visão Geral</button>
+        <button class="tab-button" onclick="openTab(event, 'math')">3. Fundamentos</button>
+        <button class="tab-button" onclick="openTab(event, 'kpke')">4. Componente K-PKE</button>
+        <button class="tab-button" onclick="openTab(event, 'visual')">5. Visualização</button>
+        <button class="tab-button" onclick="openTab(event, 'mlkem')">6. Algoritmos</button>
+        <button class="tab-button" onclick="openTab(event, 'params')">7. Parâmetros</button>
+    </nav>
+
+    <!-- TAB 1: EVOLUÇÃO (LWE / RLWE / MLWE) -->
+    <div id="lwe_evolution" class="tab-content active">
+        <h2>A Evolução dos Problemas de Reticulado</h2>
+        <p>Para entender o ML-KEM (que usa MLWE), é fundamental compreender a evolução desde o problema LWE clássico. Todos esses problemas baseiam-se na dificuldade de resolver sistemas lineares com "ruído" (erros).</p>
+
+        <div class="sub-tabs">
+            <button class="sub-tab-button lwe-btn active" onclick="openLweSubTab(event, 'explain-lwe')">LWE (Learning With Errors)</button>
+            <button class="sub-tab-button lwe-btn" onclick="openLweSubTab(event, 'explain-rlwe')">RLWE (Ring-LWE)</button>
+            <button class="sub-tab-button lwe-btn" onclick="openLweSubTab(event, 'explain-mlwe')">MLWE (Module-LWE)</button>
+        </div>
+
+        <!-- SUB-ABA LWE -->
+        <div id="explain-lwe" class="lwe-sub-tab-content active">
+            <div class="evolution-card">
+                <div class="evolution-title">LWE: Aprendizado com Erros</div>
+                <p>O problema LWE original envolve <strong>matrizes de inteiros</strong>. Imagine que você tem um sistema de equações lineares <span class="var">A · s = t</span>. Se você conhece <span class="var">A</span> e <span class="var">t</span>, pode usar eliminação gaussiana para achar <span class="var">s</span> facilmente. Porém, se adicionarmos um pequeno erro <span class="var">e</span>, tornando-o <span class="var">A · s + e = t</span>, recuperar <span class="var">s</span> torna-se um problema computacionalmente difícil.</p>
+                
+                <div class="matrix-equation">
+                    <!-- Matriz Inteiros -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">Matriz A (Inteiros)</div>
+                        <div class="matrix-bracket">
+                            <div class="matrix-container lwe-matrix">
+                                <div class="num-cell">4</div><div class="num-cell">1</div><div class="num-cell">7</div>
+                                <div class="num-cell">2</div><div class="num-cell">9</div><div class="num-cell">3</div>
+                                <div class="num-cell">5</div><div class="num-cell">6</div><div class="num-cell">8</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Inteiros mod q</div>
+                    </div>
+                    <div class="operator">×</div>
+                    <!-- Vetor s -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">s</div>
+                        <div class="matrix-bracket">
+                            <div class="matrix-container lwe-vector">
+                                <div class="num-cell secret">s₁</div>
+                                <div class="num-cell secret">s₂</div>
+                                <div class="num-cell secret">s₃</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Secreto</div>
+                    </div>
+                    <div class="operator">+</div>
+                    <!-- Vetor e -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">e</div>
+                        <div class="matrix-bracket">
+                            <div class="matrix-container lwe-vector">
+                                <div class="num-cell noise">e₁</div>
+                                <div class="num-cell noise">e₂</div>
+                                <div class="num-cell noise">e₃</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Erro Pequeno</div>
+                    </div>
+                    <div class="operator">=</div>
+                    <!-- Vetor t -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">t</div>
+                        <div class="matrix-bracket">
+                            <div class="matrix-container lwe-vector">
+                                <div class="num-cell public">t₁</div>
+                                <div class="num-cell public">t₂</div>
+                                <div class="num-cell public">t₃</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Público</div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Prós:</strong> Garantias de segurança muito fortes e flexíveis.<br>
+                    <strong>Contras:</strong> Chaves muito grandes. Para segurança criptográfica, a matriz A precisa ser enorme (ex: milhares de linhas/colunas), tornando-o impraticável para transmissão eficiente.
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-ABA RLWE -->
+        <div id="explain-rlwe" class="lwe-sub-tab-content">
+            <div class="evolution-card">
+                <div class="evolution-title">RLWE: Ring-LWE</div>
+                <p>Para resolver o problema do tamanho das chaves do LWE, o RLWE substitui a matriz de inteiros por <strong>polinômios</strong> em um anel. Multiplicar dois polinômios <span class="var">a(x) · s(x)</span> é estruturalmente similar a multiplicar uma matriz especial (circulante) por um vetor, mas requer muito menos espaço para representar.</p>
+
+                <div class="equation-display">
+                    <span class="var">a(x)</span> · <span class="var" style="color:#d63384">s(x)</span> + <span class="var" style="color:#856404">e(x)</span> = <span class="var" style="color:#0f5132">t(x)</span>
+                </div>
+
+                <div class="matrix-equation">
+                    <div class="matrix-wrapper">
+                        <div class="poly-cell" style="width:120px; height:60px; font-size:1rem;">Polinômio a(x)</div>
+                        <div class="matrix-desc">1 Polinômio Público</div>
+                    </div>
+                    <div class="operator">×</div>
+                    <div class="matrix-wrapper">
+                        <div class="poly-cell secret" style="width:120px; height:60px; font-size:1rem;">Polinômio s(x)</div>
+                        <div class="matrix-desc">1 Polinômio Secreto</div>
+                    </div>
+                    <div class="operator">+</div>
+                    <div class="matrix-wrapper">
+                        <div class="poly-cell noise" style="width:120px; height:60px; font-size:1rem;">Polinômio e(x)</div>
+                        <div class="matrix-desc">1 Polinômio de Erro</div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Prós:</strong> Chaves extremamente pequenas e computação rápida (usando NTT).<br>
+                    <strong>Contras:</strong> Estrutura rígida. A segurança depende diretamente do grau do polinômio (n). Para aumentar a segurança, você precisa dobrar o grau (ex: 512 para 1024), o que pode ser um salto muito grande em performance.
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-ABA MLWE -->
+        <div id="explain-mlwe" class="lwe-sub-tab-content">
+            <div class="evolution-card">
+                <div class="evolution-title">MLWE: Module-LWE (A Escolha do ML-KEM)</div>
+                <p>O MLWE é o "meio-termo" perfeito. Em vez de uma matriz gigante de inteiros (LWE) ou um único polinômio (RLWE), usamos uma <strong>pequena matriz de polinômios</strong> (Módulo). Isso oferece a eficiência da aritmética polinomial com a estrutura flexível de matrizes.</p>
+
+                <p>Para aumentar a segurança, não precisamos mudar o grau dos polinômios (que fica fixo em <span class="var">n=256</span>); apenas aumentamos a dimensão da matriz (<span class="var">k</span>) de 2x2, para 3x3, etc.</p>
+
+                <div class="matrix-equation">
+                    <!-- Matriz de Polinomios -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">Matriz A (Polinômios)</div>
+                        <div class="matrix-bracket">
+                            <div class="matrix-container k-2">
+                                <div class="poly-cell">P(x)</div><div class="poly-cell">P(x)</div>
+                                <div class="poly-cell">P(x)</div><div class="poly-cell">P(x)</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Estrutura Modular</div>
+                    </div>
+                    <div class="operator">×</div>
+                    <!-- Vetor s -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">s</div>
+                        <div class="matrix-bracket">
+                            <div class="vector-container k-2">
+                                <div class="poly-cell secret">s₁(x)</div>
+                                <div class="poly-cell secret">s₂(x)</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Vetor de Polinômios</div>
+                    </div>
+                    <div class="operator">+</div>
+                    <!-- Vetor e -->
+                    <div class="matrix-wrapper">
+                        <div class="matrix-label">e</div>
+                        <div class="matrix-bracket">
+                            <div class="vector-container k-2">
+                                <div class="poly-cell noise">e₁(x)</div>
+                                <div class="poly-cell noise">e₂(x)</div>
+                            </div>
+                        </div>
+                        <div class="matrix-desc">Vetor de Erros</div>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Por que o NIST escolheu MLWE?</strong> Ele permite escalar a segurança (níveis 512, 768, 1024) apenas mudando o tamanho da matriz (<span class="var">k</span>), mantendo a implementação de base (aritmética polinomial) idêntica e otimizada para todas as versões.
+                </div>
+            </div>
+        </div>
+        
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('lwe_evolution', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 2: VISÃO GERAL -->
+    <div id="intro" class="tab-content">
+        <h2>O que é o ML-KEM?</h2>
+        <p>
+            O <strong>ML-KEM</strong> (Module-Lattice-Based Key-Encapsulation Mechanism) é um padrão criptográfico pós-quântico definido no documento <strong>FIPS 203</strong> do NIST. Ele é derivado do algoritmo <em>CRYSTALS-Kyber</em>.
+        </p>
+        
+        <div class="note">
+            <strong>Objetivo:</strong> Estabelecer uma chave secreta compartilhada entre duas partes (Alice e Bob) através de um canal público inseguro. Esta chave é então usada para criptografia simétrica (como AES).
+        </div>
+
+        <h3>Por que precisamos dele?</h3>
+        <p>
+            A criptografia atual de chave pública (como RSA e Curvas Elípticas) é vulnerável a computadores quânticos de grande escala. O ML-KEM baseia-se na dificuldade do problema <strong>MLWE (Module Learning With Errors)</strong> em reticulados (lattices), que se acredita ser seguro contra ataques de computadores clássicos e quânticos.
+        </p>
+
+        <h3>Conceito Básico: KEM vs PKE</h3>
+        <ul>
+            <li><strong>PKE (Public Key Encryption):</strong> Criptografa uma mensagem qualquer.</li>
+            <li><strong>KEM (Key Encapsulation Mechanism):</strong> Criptografa (encapsula) especificamente uma chave simétrica aleatória.</li>
+        </ul>
+        <p>O ML-KEM constrói um KEM seguro (IND-CCA2) em cima de um sistema de encriptação PKE (chamado K-PKE) que é apenas moderadamente seguro (IND-CPA), utilizando uma técnica chamada transformação Fujisaki-Okamoto.</p>
+
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('intro', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 3: MATEMÁTICA -->
+    <div id="math" class="tab-content">
+        <h2>Fundamentos Matemáticos</h2>
+        <p>A segurança e eficiência do ML-KEM dependem de operações em anéis de polinômios.</p>
+
+        <h3>O Anel <span class="var">R<sub>q</sub></span></h3>
+        <p>Todas as operações principais ocorrem no anel de polinômios:</p>
+        <div class="math-block">
+            R<sub>q</sub> = ℤ<sub>q</sub>[X] / (X<sup>n</sup> + 1)
+        </div>
+        <ul>
+            <li><strong>n = 256:</strong> O grau dos polinômios é 255.</li>
+            <li><strong>q = 3329:</strong> Um número primo específico (2<sup>8</sup> · 13 + 1).</li>
+        </ul>
+
+        <h3>Vetores e Matrizes</h3>
+        <p>
+            O termo "Módulo" em ML-KEM refere-se ao uso de vetores e matrizes onde cada elemento é um polinômio em <span class="var">R<sub>q</sub></span>.
+            O tamanho dessas estruturas é definido pelo parâmetro <span class="var">k</span> (ex: 2, 3 ou 4).
+        </p>
+        <div class="note">
+            <strong>Nota sobre Transposição (<sup>T</sup>):</strong> Quando você vê <span class="var">A<sup>T</sup></span> ou <span class="var">s<sup>T</sup></span>, isso significa <strong>Matriz Transposta</strong>. A operação inverte linhas por colunas.
+            <ul>
+                <li>Se <span class="var">A</span> é uma matriz 2x2, <span class="var">A<sup>T</sup></span> troca os elementos <span class="var">A<sub>0,1</sub></span> e <span class="var">A<sub>1,0</sub></span>.</li>
+                <li>Se <span class="var">s</span> é um vetor coluna (vertical), <span class="var">s<sup>T</sup></span> vira um vetor linha (horizontal).</li>
+            </ul>
+        </div>
+
+        <h3>NTT (Number-Theoretic Transform)</h3>
+        <p>
+            Para multiplicar polinômios rapidamente, o ML-KEM usa a <strong>NTT</strong>. É uma versão da Transformada Rápida de Fourier (FFT) para corpos finitos.
+        </p>
+        <div class="math-block">
+            f(x) × g(x) em R<sub>q</sub> é lento.<br>
+            NTT(f) ∘ NTT(g) no domínio T<sub>q</sub> é muito rápido.
+        </div>
+        <p>O FIPS 203 especifica algoritmos exatos para converter para o domínio NTT e voltar (NTT<sup>-1</sup>).</p>
+
+        <h3>Ruído e Amostragem (CBD)</h3>
+        <p>
+            A segurança vem da introdução de "erros" ou ruídos. Se tivermos um sistema linear <span class="var">A · s = t</span>, é fácil encontrar <span class="var">s</span>.
+            Mas em <span class="var">A · s + e = t</span>, onde <span class="var">e</span> é um ruído pequeno, recuperar <span class="var">s</span> torna-se muito difícil (o problema MLWE).
+        </p>
+        <p>
+            O ruído é gerado usando uma <strong>Distribuição Binomial Centralizada (CBD)</strong>, parametrizada por <span class="var">η</span>.
+        </p>
+
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('math', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 4: K-PKE -->
+    <div id="kpke" class="tab-content">
+        <h2>K-PKE (Componente Interno)</h2>
+        <p>
+            O ML-KEM não usa o K-PKE diretamente para segurança final, mas como um bloco de construção. Ele consiste em três algoritmos.
+        </p>
+
+        <div class="note">
+            <strong>Atenção:</strong> O K-PKE <em>nunca</em> deve ser usado sozinho, pois é vulnerável a ataques de texto cifrado escolhido (CCA).
+        </div>
+
+        <h3>1. K-PKE.KeyGen()</h3>
+        <ol class="algo-steps">
+            <li>Gera uma semente aleatória.</li>
+            <li>Expande a semente para criar uma matriz pública <span class="var">A</span> (usando SHAKE128).</li>
+            <li>Amostra um vetor secreto <span class="var">s</span> e um vetor de erro <span class="var">e</span> da distribuição de ruído.</li>
+            <li>Calcula a chave pública: <span class="var">t = A · s + e</span>.</li>
+            <li><strong>Saída:</strong> Chave de Encriptação (<span class="var">t</span>, <span class="var">A</span>) e Chave de Decriptação (<span class="var">s</span>).</li>
+        </ol>
+
+        <h3>2. K-PKE.Encrypt(ek, m, r)</h3>
+        <p>Encripta uma mensagem <span class="var">m</span> de 32 bytes usando aleatoriedade <span class="var">r</span>.</p>
+        <ol class="algo-steps">
+            <li>Reconstrói a matriz <span class="var">A</span> a partir da chave pública.</li>
+            <li>Amostra vetores de ruído <span class="var">y</span>, <span class="var">e<sub>1</sub></span>, <span class="var">e<sub>2</sub></span> baseados em <span class="var">r</span>.</li>
+            <li>Calcula o vetor <span class="var">u = A<sup>T</sup> · y + e<sub>1</sub></span>.</li>
+            <li>Calcula o polinômio <span class="var">v = t<sup>T</sup> · y + e<sub>2</sub> + Decompress(m)</span>.</li>
+            <li>Comprime e codifica <span class="var">u</span> e <span class="var">v</span>.</li>
+            <li><strong>Saída:</strong> Texto cifrado <span class="var">c = (u, v)</span>.</li>
+        </ol>
+
+        <h3>3. K-PKE.Decrypt(dk, c)</h3>
+        <ol class="algo-steps">
+            <li>Separa <span class="var">c</span> em <span class="var">u</span> e <span class="var">v</span>.</li>
+            <li>Calcula <span class="var">m' = v - s<sup>T</sup> · u</span>. (A matemática garante que isso remove quase todo o ruído, deixando apenas a mensagem mais um erro desprezível que é corrigido pelo arredondamento).</li>
+            <li><strong>Saída:</strong> Mensagem <span class="var">m</span>.</li>
+        </ol>
+
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('kpke', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 5: VISUALIZAÇÃO -->
+    <div id="visual" class="tab-content">
+        <h2>Visualização da Geração de Chaves</h2>
+        <p>Explore como a dimensão das matrizes e vetores muda de acordo com o nível de segurança escolhido (parâmetro <span class="var">k</span>).</p>
+        
+        <div class="note">
+            Cada quadrado representa um <strong>polinômio inteiro</strong> com 256 coeficientes. A equação fundamental é <strong>t = A · s + e</strong>.
+        </div>
+
+        <div class="sub-tabs">
+            <button class="sub-tab-button active" onclick="openSubTab(event, 'vis-512')">ML-KEM-512 (k=2)</button>
+            <button class="sub-tab-button" onclick="openSubTab(event, 'vis-768')">ML-KEM-768 (k=3)</button>
+            <button class="sub-tab-button" onclick="openSubTab(event, 'vis-1024')">ML-KEM-1024 (k=4)</button>
+        </div>
+
+        <!-- VISUALIZAÇÃO 512 (k=2) -->
+        <div id="vis-512" class="sub-tab-content active">
+            <div class="matrix-equation">
+                <!-- Matriz A -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">Matriz A (2x2)</div>
+                    <div class="matrix-bracket">
+                        <div class="matrix-container k-2">
+                            <div class="poly-cell">Â<sub>0,0</sub></div><div class="poly-cell">Â<sub>0,1</sub></div>
+                            <div class="poly-cell">Â<sub>1,0</sub></div><div class="poly-cell">Â<sub>1,1</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Público</div>
+                </div>
+                <div class="operator">×</div>
+                <!-- Vetor s -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">s (2)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-2">
+                            <div class="poly-cell secret">ŝ<sub>0</sub></div>
+                            <div class="poly-cell secret">ŝ<sub>1</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Secreto</div>
+                </div>
+                <div class="operator">+</div>
+                <!-- Vetor e -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">e (2)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-2">
+                            <div class="poly-cell noise">ê<sub>0</sub></div>
+                            <div class="poly-cell noise">ê<sub>1</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Erro</div>
+                </div>
+                <div class="operator">=</div>
+                <!-- Vetor t -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">t (2)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-2">
+                            <div class="poly-cell public">t̂<sub>0</sub></div>
+                            <div class="poly-cell public">t̂<sub>1</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Público</div>
+                </div>
+            </div>
+            <p style="text-align:center; font-style:italic; color:#666;">
+                Neste nível (AES-128 eq.), o problema é encontrar 2 polinômios secretos a partir de um sistema de dimensão 2x2.
+            </p>
+        </div>
+
+        <!-- VISUALIZAÇÃO 768 (k=3) -->
+        <div id="vis-768" class="sub-tab-content">
+            <div class="matrix-equation">
+                <!-- Matriz A -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">Matriz A (3x3)</div>
+                    <div class="matrix-bracket">
+                        <div class="matrix-container k-3">
+                            <div class="poly-cell">Â<sub>0,0</sub></div><div class="poly-cell">Â<sub>0,1</sub></div><div class="poly-cell">Â<sub>0,2</sub></div>
+                            <div class="poly-cell">Â<sub>1,0</sub></div><div class="poly-cell">Â<sub>1,1</sub></div><div class="poly-cell">Â<sub>1,2</sub></div>
+                            <div class="poly-cell">Â<sub>2,0</sub></div><div class="poly-cell">Â<sub>2,1</sub></div><div class="poly-cell">Â<sub>2,2</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Público</div>
+                </div>
+                <div class="operator">×</div>
+                <!-- Vetor s -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">s (3)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-3">
+                            <div class="poly-cell secret">ŝ<sub>0</sub></div>
+                            <div class="poly-cell secret">ŝ<sub>1</sub></div>
+                            <div class="poly-cell secret">ŝ<sub>2</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Secreto</div>
+                </div>
+                <div class="operator">+</div>
+                <!-- Vetor e -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">e (3)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-3">
+                            <div class="poly-cell noise">ê<sub>0</sub></div>
+                            <div class="poly-cell noise">ê<sub>1</sub></div>
+                            <div class="poly-cell noise">ê<sub>2</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Erro</div>
+                </div>
+                <div class="operator">=</div>
+                <!-- Vetor t -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">t (3)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-3">
+                            <div class="poly-cell public">t̂<sub>0</sub></div>
+                            <div class="poly-cell public">t̂<sub>1</sub></div>
+                            <div class="poly-cell public">t̂<sub>2</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Público</div>
+                </div>
+            </div>
+            <p style="text-align:center; font-style:italic; color:#666;">
+                Neste nível (AES-192 eq.), a complexidade aumenta cubicamente para operações de matriz. É o padrão recomendado pelo NIST.
+            </p>
+        </div>
+
+        <!-- VISUALIZAÇÃO 1024 (k=4) -->
+        <div id="vis-1024" class="sub-tab-content">
+            <div class="matrix-equation">
+                <!-- Matriz A -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">Matriz A (4x4)</div>
+                    <div class="matrix-bracket">
+                        <div class="matrix-container k-4">
+                            <div class="poly-cell">Â<sub>0,0</sub></div><div class="poly-cell">Â<sub>0,1</sub></div><div class="poly-cell">Â<sub>0,2</sub></div><div class="poly-cell">Â<sub>0,3</sub></div>
+                            <div class="poly-cell">Â<sub>1,0</sub></div><div class="poly-cell">Â<sub>1,1</sub></div><div class="poly-cell">Â<sub>1,2</sub></div><div class="poly-cell">Â<sub>1,3</sub></div>
+                            <div class="poly-cell">Â<sub>2,0</sub></div><div class="poly-cell">Â<sub>2,1</sub></div><div class="poly-cell">Â<sub>2,2</sub></div><div class="poly-cell">Â<sub>2,3</sub></div>
+                            <div class="poly-cell">Â<sub>3,0</sub></div><div class="poly-cell">Â<sub>3,1</sub></div><div class="poly-cell">Â<sub>3,2</sub></div><div class="poly-cell">Â<sub>3,3</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Público</div>
+                </div>
+                <div class="operator">×</div>
+                <!-- Vetor s -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">s (4)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-4">
+                            <div class="poly-cell secret">ŝ<sub>0</sub></div>
+                            <div class="poly-cell secret">ŝ<sub>1</sub></div>
+                            <div class="poly-cell secret">ŝ<sub>2</sub></div>
+                            <div class="poly-cell secret">ŝ<sub>3</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Secreto</div>
+                </div>
+                <div class="operator">+</div>
+                <!-- Vetor e -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">e (4)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-4">
+                            <div class="poly-cell noise">ê<sub>0</sub></div>
+                            <div class="poly-cell noise">ê<sub>1</sub></div>
+                            <div class="poly-cell noise">ê<sub>2</sub></div>
+                            <div class="poly-cell noise">ê<sub>3</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Erro</div>
+                </div>
+                <div class="operator">=</div>
+                <!-- Vetor t -->
+                <div class="matrix-wrapper">
+                    <div class="matrix-label">t (4)</div>
+                    <div class="matrix-bracket">
+                        <div class="vector-container k-4">
+                            <div class="poly-cell public">t̂<sub>0</sub></div>
+                            <div class="poly-cell public">t̂<sub>1</sub></div>
+                            <div class="poly-cell public">t̂<sub>2</sub></div>
+                            <div class="poly-cell public">t̂<sub>3</sub></div>
+                        </div>
+                    </div>
+                    <div class="matrix-desc">Público</div>
+                </div>
+            </div>
+            <p style="text-align:center; font-style:italic; color:#666;">
+                Neste nível (AES-256 eq.), temos a maior segurança com o maior custo computacional e de tamanho de chaves.
+            </p>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#e9ecef; border:1px solid #ccc"></div> Uniformemente Aleatório</div>
+            <div class="legend-item"><div class="dot" style="background:#ffe3e3; border:1px solid #d63384"></div> Amostrado de CBD (Secreto)</div>
+            <div class="legend-item"><div class="dot" style="background:#fff3cd; border:1px solid #ffc107"></div> Amostrado de CBD (Erro)</div>
+            <div class="legend-item"><div class="dot" style="background:#d1e7dd; border:1px solid #198754"></div> Resultado Computado</div>
+        </div>
+
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('visual', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 6: ML-KEM -->
+    <div id="mlkem" class="tab-content">
+        <h2>Algoritmos ML-KEM</h2>
+        <p>Estes são os algoritmos "reais" usados pelo padrão. Eles adicionam checagens de validação e a transformação Fujisaki-Okamoto ao K-PKE.</p>
+
+        <h3>1. ML-KEM.KeyGen</h3>
+        <p>Gera o par de chaves para encapsulamento/decapsulamento.</p>
+        <div class="math-block">
+            (ek_PKE, dk_PKE) ← K-PKE.KeyGen(aleatoriedade)<br>
+            ek ← ek_PKE<br>
+            dk ← (dk_PKE || ek || H(ek) || z)<br>
+            // z é um valor aleatório para rejeição implícita
+        </div>
+
+        <h3>2. ML-KEM.Encaps(ek)</h3>
+        <p>Gera uma chave secreta compartilhada <span class="var">K</span> e a encapsula em um cifrotexto <span class="var">c</span>.</p>
+        <ol class="algo-steps">
+            <li>Gera uma mensagem aleatória de 32 bytes <span class="var">m</span>.</li>
+            <li>Calcula o hash de <span class="var">m</span> e <span class="var">H(ek)</span> para derivar:
+                <ul>
+                    <li>A chave compartilhada final <span class="var">K</span>.</li>
+                    <li>A aleatoriedade <span class="var">r</span> para a encriptação.</li>
+                </ul>
+            </li>
+            <li>Cria o cifrotexto: <span class="var">c = K-PKE.Encrypt(ek, m, r)</span>.</li>
+            <li><strong>Saída:</strong> (<span class="var">K</span>, <span class="var">c</span>).</li>
+        </ol>
+
+        <h3>3. ML-KEM.Decaps(dk, c)</h3>
+        <p>Recupera a chave compartilhada <span class="var">K</span>. Usa o princípio da <strong>Rejeição Implícita</strong>.</p>
+        <ol class="algo-steps">
+            <li>Decripta o cifrotexto: <span class="var">m' = K-PKE.Decrypt(dk, c)</span>.</li>
+            <li>Recalcula ("re-encripta") para verificar a integridade:
+                <ul>
+                    <li>Deriva <span class="var">K'</span> e <span class="var">r'</span> a partir de <span class="var">m'</span>.</li>
+                    <li>Calcula <span class="var">c' = K-PKE.Encrypt(ek, m', r')</span>.</li>
+                </ul>
+            </li>
+            <li><span class="highlight">O Passo Crítico:</span> Compara <span class="var">c</span> (recebido) com <span class="var">c'</span> (recalculado).
+                <ul>
+                    <li>Se <strong>iguais</strong>: Retorna <span class="var">K'</span> (Sucesso).</li>
+                    <li>Se <strong>diferentes</strong>: Retorna um hash aleatório derivado de <span class="var">z</span> e <span class="var">c</span> (Falha).</li>
+                </ul>
+            </li>
+        </ol>
+        <div class="note">
+            Isso garante que um atacante não possa manipular o cifrotexto para aprender partes da chave secreta. Se ele alterar um bit, a re-encriptação falhará e ele receberá lixo aleatório, sem saber <em>por que</em> falhou.
+        </div>
+
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('mlkem', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB 7: PARÂMETROS -->
+    <div id="params" class="tab-content">
+        <h2>Conjuntos de Parâmetros</h2>
+        <p>O FIPS 203 define três níveis de segurança, equilibrando performance e segurança.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Parâmetro</th>
+                    <th>ML-KEM-512</th>
+                    <th>ML-KEM-768</th>
+                    <th>ML-KEM-1024</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Categoria NIST</strong></td>
+                    <td>1 (AES-128)</td>
+                    <td>3 (AES-192)</td>
+                    <td>5 (AES-256)</td>
+                </tr>
+                <tr>
+                    <td><strong>Dimensão da Matriz (k)</strong></td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td><strong>Ruído (η₁)</strong></td>
+                    <td>3</td>
+                    <td>2</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td><strong>Tamanho da Chave Pública</strong></td>
+                    <td>800 bytes</td>
+                    <td>1184 bytes</td>
+                    <td>1568 bytes</td>
+                </tr>
+                <tr>
+                    <td><strong>Tamanho do Cifrotexto</strong></td>
+                    <td>768 bytes</td>
+                    <td>1088 bytes</td>
+                    <td>1568 bytes</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Funções Auxiliares</h3>
+        <p>O padrão utiliza extensivamente funções de hash da família SHA-3:</p>
+        <ul>
+            <li><strong>SHA3-256 / SHA3-512:</strong> Para hashing geral.</li>
+            <li><strong>SHAKE128 / SHAKE256:</strong> Funções de saída estendida (XOF) para gerar números pseudo-aleatórios e expandir a matriz A.</li>
+        </ul>
+
+        <div class="audio-control">
+            <button class="audio-btn" onclick="playExplanation('params', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Ouvir Explicação
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    Baseado no documento oficial <strong>NIST FIPS 203 (August 2024)</strong>.<br>
+    Este é um guia educacional e não uma implementação criptográfica.
+</footer>
+
+<script>
+    // Tab Data for TTS
+    const explanations = {
+        'lwe_evolution': "Nesta aba, exploramos a evolução dos problemas de reticulado. Começamos com o LWE, que usa matrizes grandes de inteiros. Depois, vemos o RLWE, que usa polinômios para eficiência, mas é rígido. Finalmente, chegamos ao MLWE, usado no ML-KEM, que equilibra os dois usando pequenas matrizes de polinômios para segurança flexível e eficiente.",
+        'intro': "O ML-KEM é um padrão pós-quântico do NIST, derivado do Kyber. Seu objetivo é criar uma chave secreta compartilhada segura contra computadores quânticos. Ele usa um mecanismo de encapsulamento de chaves, ou KEM, construído sobre um sistema de encriptação de chave pública para garantir segurança robusta.",
+        'math': "A matemática do ML-KEM acontece no anel de polinômios R q. Usamos a Transformada Numérica Teórica, ou NTT, para multiplicações rápidas. A segurança baseia-se na dificuldade de resolver equações lineares com ruído, onde o ruído é gerado por uma Distribuição Binomial Centralizada.",
+        'kpke': "O K-PKE é o componente interno de encriptação. Ele gera chaves públicas baseadas na equação t igual a A vezes s mais e. Ele encripta mensagens adicionando ruído e comprimindo o resultado. Lembre-se, o K-PKE não deve ser usado sozinho devido a vulnerabilidades a certos ataques.",
+        'visual': "Aqui visualizamos a equação central t igual a A vezes s mais e. Você pode ver como a dimensão das matrizes muda de 2 por 2 no nível 512, para 3 por 3 no nível 768, e 4 por 4 no nível 1024. Isso demonstra como a segurança escala apenas aumentando o tamanho da matriz.",
+        'mlkem': "Estes são os algoritmos finais. A geração de chaves cria o par público e privado. O encapsulamento gera a chave compartilhada e o cifrotexto. O decapsulamento recupera a chave e usa uma verificação crítica de re-encriptação para garantir que o cifrotexto não foi adulterado.",
+        'params': "O padrão define três níveis: ML-KEM-512, 768 e 1024, equivalentes às seguranças do AES 128, 192 e 256. Variamos a dimensão da matriz k e os parâmetros de ruído para equilibrar segurança e desempenho. Funções de hash SHA-3 são usadas extensivamente."
+    };
+
+    let currentUtterance = null;
+    let currentButton = null;
+
+    function playExplanation(tabId, btn) {
+        // Stop current speech
+        if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+            if (currentButton) currentButton.classList.remove('speaking');
+            
+            // If clicking the same button, just stop
+            if (currentButton === btn) {
+                currentButton = null;
+                return;
+            }
+        }
+
+        const text = explanations[tabId];
+        if (!text) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.0;
+
+        // Visual feedback
+        btn.classList.add('speaking');
+        currentButton = btn;
+
+        utterance.onend = function() {
+            btn.classList.remove('speaking');
+            currentButton = null;
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function openTab(evt, tabName) {
+        // Stop audio when switching tabs
+        if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+            if (currentButton) currentButton.classList.remove('speaking');
+        }
+
+        // Declaração de variáveis
+        var i, tabcontent, tablinks;
+
+        // Esconde todo o conteúdo das abas
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+            tabcontent[i].classList.remove("active");
+        }
+
+        // Remove a classe "active" de todos os botões
+        tablinks = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+
+        // Mostra a aba atual e adiciona a classe "active" ao botão
+        document.getElementById(tabName).style.display = "block";
+        
+        // Pequeno delay para permitir a animação CSS
+        setTimeout(() => {
+            document.getElementById(tabName).classList.add("active");
+        }, 10);
+        
+        evt.currentTarget.className += " active";
+    }
+
+    function openSubTab(evt, subTabName) {
+        var i, subTabContent, subTabLinks;
+
+        // Esconde todo o conteúdo das sub-abas
+        subTabContent = document.getElementsByClassName("sub-tab-content");
+        for (i = 0; i < subTabContent.length; i++) {
+            subTabContent[i].style.display = "none";
+            subTabContent[i].classList.remove("active");
+        }
+
+        // Remove a classe "active" de todos os botões de sub-aba
+        subTabLinks = document.getElementsByClassName("sub-tab-button");
+        for (i = 0; i < subTabLinks.length; i++) {
+            // Check if button belongs to main visualization sub-tabs
+            if (!subTabLinks[i].classList.contains("lwe-btn")) {
+                subTabLinks[i].className = subTabLinks[i].className.replace(" active", "");
+            }
+        }
+
+        // Mostra a sub-aba atual
+        document.getElementById(subTabName).style.display = "block";
+        setTimeout(() => {
+            document.getElementById(subTabName).classList.add("active");
+        }, 10);
+        
+        evt.currentTarget.className += " active";
+    }
+
+    // New function specifically for LWE sub-tabs to avoid conflict
+    function openLweSubTab(evt, subTabName) {
+        var i, subTabContent, subTabLinks;
+
+        // Hide all lwe-sub-tab-content
+        subTabContent = document.getElementsByClassName("lwe-sub-tab-content");
+        for (i = 0; i < subTabContent.length; i++) {
+            subTabContent[i].style.display = "none";
+            subTabContent[i].classList.remove("active");
+        }
+
+        // Remove active class from LWE buttons
+        subTabLinks = document.getElementsByClassName("lwe-btn");
+        for (i = 0; i < subTabLinks.length; i++) {
+            subTabLinks[i].className = subTabLinks[i].className.replace(" active", "");
+        }
+
+        // Show current
+        document.getElementById(subTabName).style.display = "block";
+        setTimeout(() => {
+            document.getElementById(subTabName).classList.add("active");
+        }, 10);
+        
+        evt.currentTarget.className += " active";
+    }
+</script>
+
+</body>
+</html>
