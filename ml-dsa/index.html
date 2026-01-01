@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML-DSA (FIPS 204) - Explicação Interativa</title>
+    
+    <!-- Configuração do MathJax para aceitar $ como delimitador -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <!-- MathJax para renderizar fórmulas matemáticas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --text-color: #333;
+            --bg-color: #f4f7f6;
+            --tab-bg: #e0e0e0;
+            --white: #ffffff;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #c0392b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 80vh;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        header p {
+            margin: 5px 0 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        /* Tabs Navigation */
+        .tabs-nav {
+            display: flex;
+            background-color: var(--tab-bg);
+            overflow-x: auto;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tabs-nav button {
+            background: none;
+            border: none;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #555;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            border-bottom: 4px solid transparent;
+        }
+
+        .tabs-nav button:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--accent-color);
+        }
+
+        .tabs-nav button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--accent-color);
+            background-color: var(--white);
+            font-weight: bold;
+        }
+
+        /* Tab Content */
+        .tab-content-container {
+            padding: 30px;
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h3 {
+            color: var(--accent-color);
+            margin-top: 25px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #d63031;
+        }
+
+        /* Audio Button Area */
+        .audio-controls {
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-top: 1px solid #bdc3c7;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-audio {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn-audio:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-audio.playing {
+            background-color: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(192, 57, 43, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0); }
+        }
+
+        /* Specific Visualizations */
+        .chart-container {
+            margin-top: 20px;
+        }
+
+        .bar-group {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .bar-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .bar-wrapper {
+            background-color: #eee;
+            border-radius: 5px;
+            height: 25px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            background-color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.8rem;
+            width: 0;
+            transition: width 1s ease-out;
+        }
+
+        .bar.pk { background-color: var(--accent-color); }
+        .bar.sk { background-color: var(--success); }
+        .bar.sig { background-color: var(--warning); }
+
+        table.params-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        table.params-table th, table.params-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        table.params-table th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        table.params-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .note {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+
+        /* SVG Icons inline */
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        
+        @media (max-width: 768px) {
+            .tabs-nav {
+                flex-direction: row; /* keep horizontal scroll */
+            }
+            .container {
+                margin: 0;
+                border-radius: 0;
+                min-height: 100vh;
+            }
+            table.params-table {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>ML-DSA (FIPS 204)</h1>
+        <p>Padrão de Assinatura Digital Baseado em Reticulados de Módulos</p>
+    </header>
+
+    <nav class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab(event, 'visao-geral')">1. Visão Geral</button>
+        <button class="tab-btn" onclick="switchTab(event, 'fundamentos')">2. Fundamentos Matemáticos</button>
+        <button class="tab-btn" onclick="switchTab(event, 'algoritmos')">3. Algoritmos</button>
+        <button class="tab-btn" onclick="switchTab(event, 'chaves')">4. Geração de Chaves</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tamanhos')">5. Tamanhos (Visual)</button>
+        <button class="tab-btn" onclick="switchTab(event, 'parametros')">6. Parâmetros</button>
+        <button class="tab-btn" onclick="switchTab(event, 'adicionais')">7. Adicionais</button>
+    </nav>
+
+    <div class="tab-content-container">
+
+        <!-- TAB 1: VISÃO GERAL -->
+        <div id="visao-geral" class="tab-pane active">
+            <h2>Visão Geral do ML-DSA</h2>
+            <p>O <strong>ML-DSA</strong> (Module-Lattice-Based Digital Signature Algorithm) é o padrão de assinatura digital especificado no FIPS 204. Ele é derivado do algoritmo CRYSTALS-Dilithium, selecionado pelo NIST após um processo rigoroso de padronização de criptografia pós-quântica.</p>
+            
+            <h3>Propósito</h3>
+            <p>O objetivo do ML-DSA é fornecer assinaturas digitais seguras contra adversários que possuam computadores quânticos de grande escala. Ele serve para autenticar a identidade de um signatário e garantir a integridade dos dados.</p>
+
+            <h3>Modelo de Segurança</h3>
+            <p>O ML-DSA é projetado para ser <strong>SUF-CMA</strong> (Strongly Existentially Unforgeable under Chosen Message Attack). Isso significa que, mesmo que um atacante consiga fazer com que a vítima assine mensagens de sua escolha, ele não conseguirá forjar uma nova assinatura válida para uma nova mensagem, nem mesmo gerar uma assinatura diferente para uma mensagem já assinada.</p>
+
+            <div class="note">
+                <strong>Nota:</strong> O ML-DSA é considerado seguro contra ataques clássicos e quânticos, baseando-se na dificuldade de problemas em reticulados (lattices).
+            </div>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                O ML-DSA é o novo padrão de assinatura digital do governo americano, definido no documento FIPS 204. Ele foi criado para resistir a computadores quânticos, que poderiam quebrar as assinaturas atuais. Baseado no algoritmo Crystals-Dilithium, ele garante que ninguém possa falsificar sua assinatura, mesmo se tiverem acesso a um supercomputador quântico.
+            </div>
+        </div>
+
+        <!-- TAB 2: FUNDAMENTOS MATEMÁTICOS -->
+        <div id="fundamentos" class="tab-pane">
+            <h2>Fundamentos Matemáticos</h2>
+            <p>A segurança do ML-DSA baseia-se em dois problemas computacionais difíceis sobre reticulados de módulos:</p>
+            <ul>
+                <li><strong>MLWE (Module Learning With Errors):</strong> O problema de aprender com erros em módulos.</li>
+                <li><strong>MSIS (Module Short Integer Solution):</strong> O problema da solução inteira curta em módulos (especificamente a variante SelfTargetMSIS).</li>
+            </ul>
+
+            <h3>O Anel de Polinômios</h3>
+            <p>Todas as operações principais ocorrem em um anel de polinômios $R_q$.</p>
+            <p>$$R_q = \mathbb{Z}_q[X] / (X^{256} + 1)$$</p>
+            <p>Isso significa que os elementos são polinômios de grau 255 com coeficientes inteiros módulo $q$.</p>
+
+            <h3>O Número Primo $q$</h3>
+            <p>O algoritmo utiliza um primo específico para permitir operações eficientes:</p>
+            <p>$$q = 2^{23} - 2^{13} + 1 = 8380417$$</p>
+
+            <h3>Transformada Teórica dos Números (NTT)</h3>
+            <p>Para multiplicar polinômios rapidamente, o ML-DSA utiliza a representação NTT. O anel $R_q$ é isomorfo a um produto de corpos menores, permitindo que a multiplicação de polinômios seja feita ponto-a-ponto, o que é muito mais rápido.</p>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                A matemática do ML-DSA usa reticulados, que são estruturas em grade multidimensionais. A segurança vem da dificuldade de resolver problemas geométricos complexos nesses reticulados. Ele opera sobre polinômios com 256 coeficientes. O algoritmo usa um número primo especial, aproximadamente oito milhões, e uma técnica chamada Transformada Teórica dos Números para realizar multiplicações de forma extremamente rápida.
+            </div>
+        </div>
+
+        <!-- TAB 3: ALGORITMOS -->
+        <div id="algoritmos" class="tab-pane">
+            <h2>Estrutura dos Algoritmos</h2>
+            <p>O ML-DSA consiste em três algoritmos principais:</p>
+
+            <h3>1. Geração de Chaves (KeyGen)</h3>
+            <p>Gera uma chave pública ($pk$) e uma chave privada ($sk$). Utiliza uma semente aleatória para expandir uma matriz $A$ e vetores secretos $s_1, s_2$ com coeficientes pequenos.</p>
+
+            <h3>2. Assinatura (Sign)</h3>
+            <p>Usa a chave privada e a mensagem. O esquema utiliza o paradigma <strong>Fiat-Shamir com Abortos</strong>. O processo envolve:</p>
+            <ol>
+                <li>Gerar um vetor aleatório mascarado $y$.</li>
+                <li>Calcular um compromisso $w_1$ (parte alta de $Ay$).</li>
+                <li>Criar um desafio $c$ (hash do compromisso e da mensagem).</li>
+                <li>Calcular a resposta potencial $z = y + c \cdot s_1$.</li>
+                <li><strong>Rejeição (Aborto):</strong> Se os coeficientes de $z$ forem muito grandes ou vazarem informações sobre a chave secreta, o processo recomeça com um novo $y$.</li>
+            </ol>
+
+            <h3>3. Verificação (Verify)</h3>
+            <p>O verificador usa a chave pública, a mensagem e a assinatura. Ele tenta reconstruir o desafio $c$ e verifica se a resposta $z$ é "curta" o suficiente (coeficientes pequenos) e se satisfaz a equação linear vinculada à chave pública.</p>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                O sistema funciona em três etapas. Primeiro, na geração de chaves, cria-se uma estrutura matemática pública e vetores secretos. Segundo, na assinatura, usa-se uma técnica de tentativa e erro chamada "Fiat-Shamir com Abortos". O assinante tenta criar uma prova matemática; se a prova revelar muito sobre o segredo ou for muito grande, ele descarta e tenta de novo. Terceiro, na verificação, qualquer um pode checar matematicamente se a prova é válida e pequena o suficiente.
+            </div>
+        </div>
+
+        <!-- TAB 4: GERAÇÃO DE CHAVES -->
+        <div id="chaves" class="tab-pane">
+            <h2>Detalhes da Geração do Par de Chaves</h2>
+            <p>O Algoritmo <code>ML-DSA.KeyGen</code> segue os seguintes passos lógicos:</p>
+
+            <ol>
+                <li><strong>Semente Aleatória:</strong> Gera uma semente aleatória de 32 bytes $\xi$.</li>
+                <li><strong>Expansão:</strong> Usa uma função XOF (SHAKE256) para expandir $\xi$ em:
+                    <ul>
+                        <li>$\rho$: Semente para gerar a matriz pública $A$.</li>
+                        <li>$\rho'$: Semente para gerar os vetores secretos de erro $s_1$ e $s_2$.</li>
+                        <li>$K$: Chave para uso durante a assinatura.</li>
+                    </ul>
+                </li>
+                <li><strong>Geração da Matriz:</strong> A matriz $A$ (de dimensão $k \times l$) é amostrada pseudo-aleatoriamente a partir de $\rho$.</li>
+                <li><strong>Geração de Segredos:</strong> Os vetores $s_1$ e $s_2$ são amostrados com coeficientes pequenos (baseados em $\eta$).</li>
+                <li><strong>Cálculo da Chave Pública:</strong> Calcula-se $t = A s_1 + s_2$.</li>
+                <li><strong>Compressão:</strong> O vetor $t$ é dividido em partes alta ($t_1$) e baixa ($t_0$). Apenas $t_1$ vai para a chave pública.</li>
+            </ol>
+
+            <p><strong>Resultado:</strong><br>
+            Chave Pública ($pk$) = $\rho$ e $t_1$.<br>
+            Chave Privada ($sk$) = $\rho, K, tr, s_1, s_2, t_0$.</p>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                Para criar as chaves, tudo começa com um número aleatório de 32 bytes. Esse número é expandido para criar uma matriz pública grande e dois vetores secretos com números pequenos. A chave pública é calculada multiplicando a matriz por um vetor secreto e somando o outro. Uma parte importante é que a chave pública é comprimida para economizar espaço, descartando bits menos significativos que não afetam a segurança.
+            </div>
+        </div>
+
+        <!-- TAB 5: VISUALIZAÇÃO DE TAMANHOS -->
+        <div id="tamanhos" class="tab-pane">
+            <h2>Tamanhos de Chaves e Assinaturas (Bytes)</h2>
+            <p>Comparação dos três níveis de segurança padronizados no FIPS 204.</p>
+
+            <div class="chart-container">
+                <!-- ML-DSA-44 -->
+                <div class="bar-group">
+                    <h3>ML-DSA-44 (Nível 2 - NIST)</h3>
+                    <span class="bar-label">Chave Pública (1312 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar pk" style="width: 27%;">1312</div></div>
+                    
+                    <span class="bar-label">Chave Privada (2560 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar sk" style="width: 52%;">2560</div></div>
+                    
+                    <span class="bar-label">Assinatura (2420 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar sig" style="width: 49%;">2420</div></div>
+                </div>
+
+                <!-- ML-DSA-65 -->
+                <div class="bar-group">
+                    <h3>ML-DSA-65 (Nível 3 - NIST)</h3>
+                    <span class="bar-label">Chave Pública (1952 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar pk" style="width: 40%;">1952</div></div>
+                    
+                    <span class="bar-label">Chave Privada (4032 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar sk" style="width: 82%;">4032</div></div>
+                    
+                    <span class="bar-label">Assinatura (3309 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar sig" style="width: 67%;">3309</div></div>
+                </div>
+
+                <!-- ML-DSA-87 -->
+                <div class="bar-group">
+                    <h3>ML-DSA-87 (Nível 5 - NIST)</h3>
+                    <span class="bar-label">Chave Pública (2592 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar pk" style="width: 53%;">2592</div></div>
+                    
+                    <span class="bar-label">Chave Privada (4896 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar sk" style="width: 100%;">4896</div></div>
+                    
+                    <span class="bar-label">Assinatura (4627 bytes)</span>
+                    <div class="bar-wrapper"><div class="bar sig" style="width: 94%;">4627</div></div>
+                </div>
+            </div>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                Existem três variantes principais: 44, 65 e 87. O ML-DSA-44 é o menor, com chaves públicas de 1 ponto 3 kilobytes e assinaturas de 2 ponto 4 kilobytes. O ML-DSA-87 é o mais seguro, mas também o maior, com chaves privadas chegando a quase 5 kilobytes e assinaturas de 4 ponto 6 kilobytes. As barras na tela mostram visualmente como esses tamanhos aumentam conforme o nível de segurança sobe.
+            </div>
+        </div>
+
+        <!-- TAB 6: PARÂMETROS -->
+        <div id="parametros" class="tab-pane">
+            <h2>Conjuntos de Parâmetros</h2>
+            <p>Os parâmetros definem as dimensões da matriz ($k \times l$) e os limites de segurança.</p>
+
+            <table class="params-table">
+                <thead>
+                    <tr>
+                        <th>Parâmetro</th>
+                        <th>ML-DSA-44</th>
+                        <th>ML-DSA-65</th>
+                        <th>ML-DSA-87</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Nível de Segurança</strong></td>
+                        <td>Categoria 2</td>
+                        <td>Categoria 3</td>
+                        <td>Categoria 5</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dimensões da Matriz $(k, l)$</strong></td>
+                        <td>$(4, 4)$</td>
+                        <td>$(6, 5)$</td>
+                        <td>$(8, 7)$</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Módulo $q$</strong></td>
+                        <td colspan="3">8.380.417</td>
+                    </tr>
+                    <tr>
+                        <td><strong>$\tau$ (Peso Hamming no desafio)</strong></td>
+                        <td>39</td>
+                        <td>49</td>
+                        <td>60</td>
+                    </tr>
+                    <tr>
+                        <td><strong>$\eta$ (Limite de chave privada)</strong></td>
+                        <td>2</td>
+                        <td>4</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Entropia do Desafio</strong></td>
+                        <td>192 bits</td>
+                        <td>225 bits</td>
+                        <td>257 bits</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>O sufixo numérico (44, 65, 87) refere-se às dimensões da matriz $A$ ($k \times l$). Por exemplo, ML-DSA-65 usa uma matriz $6 \times 5$.</p>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                A tabela mostra as configurações técnicas. O mais importante é entender que o ML-DSA-44 usa uma matriz 4 por 4, o 65 usa 6 por 5, e o 87 usa 8 por 7. Todos usam o mesmo número primo para os cálculos. A segurança aumenta com o tamanho da matriz e a complexidade do desafio matemático.
+            </div>
+        </div>
+
+        <!-- TAB 7: EXPLICAÇÕES ADICIONAIS -->
+        <div id="adicionais" class="tab-pane">
+            <h2>Explicações Adicionais e Implementação</h2>
+            
+            <h3>Assinatura "Hedged" vs Determinística</h3>
+            <p>O padrão recomenda uma abordagem "hedged" (com proteção). Isso significa que, ao assinar, usa-se tanto a chave privada quanto um valor aleatório novo (fresco). Isso protege contra falhas no gerador de números aleatórios e ataques de canal lateral (side-channel). Existe uma variante puramente determinística, mas ela é menos recomendada onde ataques físicos são uma preocupação.</p>
+
+            <h3>HashML-DSA (Pre-Hash)</h3>
+            <p>Para mensagens muito grandes ou compatibilidade com sistemas legados, o FIPS 204 define o <strong>HashML-DSA</strong>. Nele, a mensagem é primeiro processada por uma função de hash (como SHA-256 ou SHAKE128) e o resumo (digest) resultante é o que é efetivamente assinado. Isso requer o uso de Identificadores de Objeto (OIDs) específicos durante a assinatura.</p>
+
+            <h3>Aritmética de Ponto Flutuante</h3>
+            <p class="note" style="border-left-color: var(--danger);"><strong>Atenção:</strong> Implementações do ML-DSA <strong>NÃO</strong> devem usar aritmética de ponto flutuante. Erros de arredondamento podem levar a resultados incorretos ou falhas de segurança. Toda a matemática deve ser feita com inteiros.</p>
+
+            <h3>Context Strings</h3>
+            <p>O algoritmo suporta uma "string de contexto" (até 255 bytes). Isso permite separar domínios de assinatura, garantindo que uma assinatura gerada para um contexto não seja válida em outro.</p>
+
+            <!-- Texto otimizado para fala -->
+            <div class="speech-text" style="display:none;">
+                Alguns pontos finais importantes: Primeiro, recomenda-se usar aleatoriedade extra ao assinar para proteger contra ataques físicos. Segundo, para arquivos grandes, existe a versão HashML-DSA, que assina o resumo do arquivo em vez do arquivo todo. Terceiro, e muito importante, os programadores nunca devem usar números com vírgula ou ponto flutuante para implementar isso; apenas números inteiros são permitidos para evitar erros de precisão.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AUDIO CONTROLS -->
+    <div class="audio-controls">
+        <span id="status-text">Selecione uma aba para ouvir o conteúdo.</span>
+        <button class="btn-audio" onclick="toggleSpeech()">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            <span id="btn-text">Ouvir Explicação</span>
+        </button>
+    </div>
+</div>
+
+<script>
+    let synthesis = window.speechSynthesis;
+    let currentUtterance = null;
+    let isSpeaking = false;
+
+    function switchTab(evt, tabId) {
+        // 1. Hide all tabs
+        const tabPanes = document.getElementsByClassName("tab-pane");
+        for (let i = 0; i < tabPanes.length; i++) {
+            tabPanes[i].classList.remove("active");
+        }
+
+        // 2. Deactivate all buttons
+        const tabBtns = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < tabBtns.length; i++) {
+            tabBtns[i].classList.remove("active");
+        }
+
+        // 3. Show current tab and activate button
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
+
+        // 4. Stop audio if switching tabs
+        stopSpeech();
+        
+        // 5. Update status text
+        const tabName = evt.currentTarget.innerText;
+        document.getElementById("status-text").innerText = `Pronto para ler: ${tabName}`;
+    }
+
+    function toggleSpeech() {
+        if (isSpeaking) {
+            stopSpeech();
+        } else {
+            speakCurrentTab();
+        }
+    }
+
+    function stopSpeech() {
+        if (synthesis.speaking) {
+            synthesis.cancel();
+        }
+        isSpeaking = false;
+        updateButtonState(false);
+    }
+
+    function speakCurrentTab() {
+        // Get active tab
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) return;
+
+        // Try to get optimized speech text first, fallback to innerText
+        const speechDiv = activeTab.querySelector('.speech-text');
+        let textToRead = "";
+
+        if (speechDiv) {
+            textToRead = speechDiv.innerText;
+        } else {
+            // Fallback: simple cleanup of the text
+            textToRead = activeTab.innerText;
+        }
+
+        if (!textToRead) return;
+
+        // Configure Utterance
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onend = function() {
+            isSpeaking = false;
+            updateButtonState(false);
+            document.getElementById("status-text").innerText = "Leitura concluída.";
+        };
+
+        utterance.onerror = function(e) {
+            console.error("Erro na fala:", e);
+            isSpeaking = false;
+            updateButtonState(false);
+        };
+
+        // Start speaking
+        isSpeaking = true;
+        updateButtonState(true);
+        synthesis.speak(utterance);
+    }
+
+    function updateButtonState(speaking) {
+        const btn = document.querySelector('.btn-audio');
+        const btnText = document.getElementById('btn-text');
+        
+        if (speaking) {
+            btn.classList.add('playing');
+            btnText.innerText = "Parar Leitura";
+            document.getElementById("status-text").innerText = "Lendo conteúdo...";
+        } else {
+            btn.classList.remove('playing');
+            btnText.innerText = "Ouvir Explicação";
+        }
+    }
+
+    // Initialize charts animation on load
+    window.onload = function() {
+        // Trigger animations for visible bars initially
+        // Since tab 5 is hidden, this logic runs when tab 5 is clicked usually,
+        // but CSS transitions handle the width change if we just let them render.
+    };
+</script>
+
+</body>
+</html>
