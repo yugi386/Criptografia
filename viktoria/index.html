@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viktoria Hash - Explorador Interativo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MathJax para fórmulas matemáticas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        /* Tema Claro e Animações */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            color: #334155; /* Slate 700 */
+            transition: background-color 0.5s;
+        }
+
+        /* Títulos */
+        h1, h2, h3, h4 {
+            color: #0f172a; /* Slate 900 */
+        }
+        
+        /* Animações de Entrada */
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+        
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scrollbar Personalizada (Claro) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Estilização da Barra de Progresso (Input Range) */
+        input[type=range] {
+            -webkit-appearance: none; 
+            width: 100%; 
+            background: transparent; 
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #2563eb; /* Blue 600 */
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1; /* Slate 300 */
+            border-radius: 2px;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Classes para animações específicas */
+        .float-anim { animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .pulse-anim { animation: pulse-soft 2s infinite; }
+        @keyframes pulse-soft {
+            0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Estilo para código/fórmulas */
+        code {
+            background-color: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', Courier, monospace;
+            color: #d946ef;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- Navegação Lateral (Sidebar Claro) -->
+    <nav class="w-full md:w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col h-auto md:h-screen sticky top-0 z-10 shadow-sm">
+        <div class="p-6 border-b border-slate-100 bg-slate-50">
+            <h1 class="text-2xl font-bold text-blue-600"><i class="fas fa-lock me-2"></i>Viktoria Hash</h1>
+            <p class="text-xs text-slate-500 mt-1">por Edimar Veríssimo</p>
+        </div>
+        
+        <div class="overflow-y-auto flex-1 p-2 space-y-1">
+            <!-- Botões das Abas -->
+            <button onclick="openTab('tab1')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium bg-blue-50 text-blue-700 border-l-4 border-blue-600" id="btn-tab1">
+                <i class="fas fa-question-circle w-5"></i> Definição Técnica
+            </button>
+            <button onclick="openTab('tab2')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab2">
+                <i class="fas fa-brain w-5"></i> Lógica de Estado
+            </button>
+            <button onclick="openTab('tab3')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab3">
+                <i class="fas fa-lightbulb w-5"></i> Inovações (IV)
+            </button>
+            <button onclick="openTab('tab4')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab4">
+                <i class="fas fa-ruler-horizontal w-5"></i> Saída Variável
+            </button>
+            <button onclick="openTab('tab5')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab5">
+                <i class="fas fa-code w-5"></i> O Algoritmo
+            </button>
+            <button onclick="openTab('tab6')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab6">
+                <i class="fas fa-shield-alt w-5"></i> Entropia e Segurança
+            </button>
+            <button onclick="openTab('tab7')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab7">
+                <i class="fas fa-cogs w-5"></i> Parametrização T1/T2
+            </button>
+            <button onclick="openTab('tab8')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab8">
+                <i class="fas fa-chart-line w-5"></i> Avaliação e Performance
+            </button>
+            <button onclick="openTab('tab9')" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent" id="btn-tab9">
+                <i class="fas fa-flag-checkered w-5"></i> Conclusão Técnica
+            </button>
+        </div>
+    </nav>
+
+    <!-- Área de Conteúdo Principal -->
+    <main class="flex-1 bg-slate-50 p-6 md:p-10 overflow-y-auto h-screen relative scroll-smooth">
+        
+        <!-- Conteúdo das Abas -->
+        <div class="max-w-4xl mx-auto pb-40"> <!-- Padding bottom extra para o player -->
+            
+            <!-- Tab 1: O que é Hash (Técnico) -->
+            <div id="tab1" class="tab-content active">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Definição Técnica: Viktoria Hash</h2>
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>A Viktoria Hash é definida formalmente como uma função de compressão que mapeia um espaço de entrada de até \(2^{480}-1\) bytes para um espaço de saída fixo de 512 bits. Diferente de construções clássicas baseadas em palavras de 32 bits (como SHA-256) ou 64 bits (como SHA-512), a Viktoria é otimizada para operações de <strong>8 bits</strong>, tornando-a ideal para processadores de baixo custo e arquiteturas IoT.</p>
+                    <p>A função opera sob um paradigma de "Estado Interno Dinâmico", onde a estrutura de permutação interna evolui não apenas com base nas rodadas do algoritmo, mas é inicializada de forma única dependendo do tamanho e do conteúdo inicial da mensagem.</p>
+                </div>
+            </div>
+
+            <!-- Tab 2: Lógica -->
+            <div id="tab2" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Lógica de Estado e Permutação</h2>
+                
+                <div class="canvas-container bg-slate-900 mb-6 p-4">
+                    <canvas id="logicCanvas" width="800" height="400" class="w-full h-auto rounded"></canvas>
+                    <div class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">Visualização: Permutação S1/S2 via T_m</div>
+                </div>
+                <div class="flex justify-center gap-4 mb-6">
+                    <button onclick="startLogicAnim()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-play me-2"></i> Animar Lógica</button>
+                    <button onclick="stopLogicAnim()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded transition"><i class="fas fa-stop me-2"></i> Parar</button>
+                </div>
+
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>O núcleo da Viktoria reside em seus vetores de estado interno. Inicialmente configurados, eles são drasticamente alterados logo no pré-processamento, utilizando o tamanho da mensagem e os primeiros bytes do arquivo para criar uma configuração única antes mesmo do início da compressão principal.</p>
+                </div>
+            </div>
+
+            <!-- Tab 3: Inovações -->
+            <div id="tab3" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Inovações: Customização e Barreira</h2>
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>A Viktoria introduz o conceito de <strong>customização de estado</strong>. Enquanto o AES usa uma chave para gerar rodadas, a Viktoria usa a própria mensagem para definir o estado inicial das permutações que irão criptografá-la. Isso cria uma interdependência circular que fortalece o efeito avalanche instantaneamente.</p>
+                </div>
+            </div>
+
+            <!-- Tab 4: Tamanhos -->
+            <div id="tab4" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Arquitetura de Saída Variável</h2>
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>A função de compressão nativa produz 512 bits, mas suporta saídas estendidas (1024, 2048 bits) continuando a iteração do estado evoluído.</p>
+                </div>
+            </div>
+
+            <!-- Tab 5: Algoritmo (CORRIGIDO) -->
+            <div id="tab5" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">O Algoritmo: Função de Compressão</h2>
+                
+                <!-- Animação de Canvas (Corrigida) -->
+                <div class="canvas-container bg-slate-900 mb-6 p-4 border border-slate-700 shadow-lg relative">
+                    <canvas id="algoCanvas" width="800" height="450" class="w-full h-auto rounded"></canvas>
+                    <div class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm border border-slate-600">Simulação: Fluxo Dinâmico</div>
+                    <div class="absolute bottom-4 left-0 right-0 text-center">
+                        <span class="inline-block bg-black/60 text-blue-300 text-xs px-3 py-1 rounded-full mb-2 backdrop-blur-sm border border-blue-900/50" id="algoStatus">Pronto para iniciar</span>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 mb-6">
+                    <button onclick="startAlgoAnim()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full shadow-lg transition transform hover:scale-105 active:scale-95 flex items-center gap-2"><i class="fas fa-play"></i> Iniciar Processo</button>
+                    <button onclick="stopAlgoAnim()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2 rounded-full transition hover:shadow-md flex items-center gap-2"><i class="fas fa-stop"></i> Parar</button>
+                </div>
+
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>O algoritmo principal processa a mensagem byte a byte, utilizando variáveis de controle que atuam como ponteiros nos estados. A grande força reside na mutabilidade: as tabelas de substituição e os estados internos não são estáticos; eles evoluem a cada byte processado da mensagem.</p>
+                    <div class="bg-slate-800 text-green-400 p-4 rounded font-mono text-sm overflow-x-auto my-4">
+                        // Pseudo-código Simplificado<br>
+                        Enquanto houver bytes na mensagem:<br>
+                        &nbsp;&nbsp;x = Mensagem[k];<br>
+                        &nbsp;&nbsp;AtualizaEstado(S1, S2, x);<br>
+                        &nbsp;&nbsp;output = T1[t] ^ T2[(t + x)]; // T1 e T2 também evoluem<br>
+                        &nbsp;&nbsp;k++;
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 6: Segurança -->
+            <div id="tab6" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Entropia e Análise de Segurança</h2>
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>A segurança da Viktoria deriva da magnitude de seu estado interno \( (256!)^2 \approx 2^{3376} \). A resistência a colisão para 512 bits é de \(2^{256}\), considerada computacionalmente inviável.</p>
+                </div>
+            </div>
+
+            <!-- Tab 7: Parametrização T1/T2 (CORRIGIDO) -->
+            <div id="tab7" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Parametrização: T1 e T2 Dinâmicas</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-500 mb-6">
+                    <h3 class="text-xl font-bold text-indigo-700 mb-2">Natureza Evolutiva das S-Boxes</h3>
+                    <p class="text-slate-700 mb-4">
+                        Ao contrário do AES, onde a S-Box é uma tabela de substituição fixa e imutável, na Viktoria Hash, <strong>T1 e T2 são entidades vivas</strong>.
+                    </p>
+                    <ul class="list-disc pl-5 space-y-2 text-slate-600">
+                        <li><strong>Inicialização Personalizada:</strong> Elas começam com uma permutação base, mas são imediatamente embaralhadas com base no conteúdo e tamanho do arquivo de entrada (mensagem). Isso significa que dois arquivos diferentes começam com S-Boxes T1/T2 completamente diferentes.</li>
+                        <li><strong>Mutação Contínua:</strong> Durante o cálculo do hash, a cada rodada ou byte processado, T1 e T2 continuam a sofrer permutações (swaps) internas.</li>
+                        <li><strong>Consequência:</strong> A função de substituição \( S(x) \) no tempo \( t \) é diferente da função \( S(x) \) no tempo \( t+1 \). Isso anula ataques baseados em tabelas pré-computadas ou criptoanálise linear estática.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-lg shadow-inner overflow-hidden font-mono text-xs text-green-400">
+                    <p>// Conceito de T1/T2 Dinâmicas</p>
+                    <p>Inicializa_Tabelas_Base(T1, T2); // Valores do apêndice</p>
+                    <p>Mistura_Com_Arquivo(T1, T2, Mensagem); // Personalização inicial</p>
+                    <br>
+                    <p>Loop_Hash(byte x) {</p>
+                    <p>&nbsp;&nbsp;...</p>
+                    <p>&nbsp;&nbsp;// A tabela muda enquanto é usada</p>
+                    <p>&nbsp;&nbsp;Swap(T1[a], T1[b]); </p>
+                    <p>&nbsp;&nbsp;Resultado = T1[index] ^ T2[...];</p>
+                    <p>}</p>
+                </div>
+            </div>
+
+            <!-- Tab 8: Avaliação -->
+            <div id="tab8" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Avaliação e Performance</h2>
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>A Viktoria sacrifica uma pequena fração de velocidade em troca de uma segurança estrutural massiva, especialmente eficaz em arquiteturas de 8 bits.</p>
+                </div>
+            </div>
+
+            <!-- Tab 9: Considerações Finais -->
+            <div id="tab9" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6 border-b border-slate-200 pb-4">Conclusão Técnica</h2>
+                <div class="prose prose-slate prose-lg text-slate-600 content-text">
+                    <p>O algoritmo Viktoria propõe uma ruptura com o design tradicional. Ao fundir conceitos de cifras de fluxo com a robustez de funções hash, ele oferece uma alternativa atraente onde a entropia do estado interno é crítica.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Player de Áudio Fixo -->
+    <div class="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 transition-transform duration-300" id="audio-player">
+        <div class="max-w-4xl mx-auto flex flex-col gap-2">
+            <div class="flex justify-between items-center text-xs text-slate-500 mb-1">
+                <span id="status-text">Pronto para ler</span>
+                <span id="progress-percent" class="font-bold text-blue-600">0%</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleAudio()" class="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg transition transform hover:scale-105 active:scale-95" id="play-btn">
+                    <i class="fas fa-headphones"></i>
+                </button>
+                <button onclick="stopAudio()" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-500 flex items-center justify-center transition border border-slate-200" title="Parar Áudio">
+                    <i class="fas fa-stop"></i>
+                </button>
+                <div class="flex-1 relative group py-2"> 
+                    <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1" onchange="seekAudio(this.value)" oninput="updateTooltip(this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Gerenciamento de Abas ---
+        let currentTabId = 'tab1';
+
+        function openTab(tabId) {
+            stopAudio();
+            stopLogicAnim(); 
+            stopAlgoAnim();
+
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium text-slate-600 border-l-4 border-transparent';
+            });
+
+            const targetTab = document.getElementById(tabId);
+            if(targetTab) {
+                targetTab.classList.add('active');
+                currentTabId = tabId;
+                const activeBtn = document.getElementById('btn-' + tabId);
+                if(activeBtn) activeBtn.className = 'nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition flex items-center gap-3 text-sm font-medium bg-blue-50 text-blue-700 border-l-4 border-blue-600 shadow-sm';
+            }
+            
+            resetPlayerUI();
+        }
+
+        // --- Animação Tab 2 (Lógica) ---
+        let animId2;
+        let frames2 = 0;
+        let s1 = Array(256).fill(0).map((_, i) => i);
+        let s2 = Array(256).fill(0).map((_, i) => 255 - i);
+        let activeIndices = [];
+
+        function drawGrid(ctx, data, offsetX, offsetY, label, color) {
+            const cols = 16;
+            const cellSize = 12;
+            const gap = 2;
+            ctx.fillStyle = '#1e293b'; ctx.font = '14px Arial'; ctx.fillText(label, offsetX, offsetY - 10);
+            for (let i = 0; i < 256; i++) {
+                const x = (i % cols) * (cellSize + gap) + offsetX;
+                const y = Math.floor(i / cols) * (cellSize + gap) + offsetY;
+                ctx.fillStyle = activeIndices.includes(i) ? '#ef4444' : color;
+                ctx.fillRect(x, y, cellSize, cellSize);
+            }
+        }
+
+        function animateLogic() {
+            const canvas = document.getElementById('logicCanvas');
+            if(!canvas || !canvas.getContext) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,800,400);
+            ctx.fillStyle = '#f1f5f9'; ctx.fillRect(0,0,800,400);
+
+            ctx.fillStyle = '#3b82f6'; ctx.fillRect(50, 50, 700, 20);
+            ctx.fillStyle = '#ffffff'; ctx.fillText("Fluxo de Permutação", 60, 65);
+            
+            const cursorX = 50 + (frames2 % 700);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.5)'; ctx.fillRect(cursorX, 45, 10, 30);
+
+            if (frames2 % 5 === 0) activeIndices = [Math.floor(Math.random() * 256), Math.floor(Math.random() * 256)];
+
+            drawGrid(ctx, s1, 100, 120, "Estado S1", '#94a3b8');
+            drawGrid(ctx, s2, 450, 120, "Estado S2", '#64748b');
+
+            frames2++;
+            animId2 = requestAnimationFrame(animateLogic);
+        }
+        function startLogicAnim() { if(!animId2) { frames2=0; animateLogic(); } }
+        function stopLogicAnim() { cancelAnimationFrame(animId2); animId2 = null; }
+
+        // --- Animação Tab 5 (Algoritmo) - CORRIGIDA ---
+        let animId5;
+        let algoFrames = 0;
+        let particles = [];
+        let sBoxState = Array(64).fill(0).map(() => Math.random());
+
+        function drawAlgoAnim() {
+            const canvas = document.getElementById('algoCanvas');
+            // Verificação de segurança se a aba foi fechada ou canvas não existe
+            if(!canvas || !canvas.parentElement || canvas.parentElement.offsetParent === null) {
+                // Se o canvas não está visível, paramos a animação para economizar recursos
+                stopAlgoAnim();
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
+            
+            // Grid de fundo
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+            for(let i=0; i<w; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+            for(let i=0; i<h; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(w,i); ctx.stroke(); }
+
+            algoFrames++;
+
+            // 1. Textos de Variáveis
+            ctx.fillStyle = '#fff'; ctx.font = '14px Courier New';
+            ctx.fillText(`a = ${(algoFrames * 3) % 256}`, 20, 30);
+            ctx.fillText(`b = ${(algoFrames * 7) % 256}`, 20, 50);
+
+            // 2. Entradas
+            const inputs = [
+                {x: 100, y: h/2 - 100, label: 'Mensagem', color: '#3b82f6'},
+                {x: 100, y: h/2, label: 'S-Box T1', color: '#8b5cf6'},
+                {x: 100, y: h/2 + 100, label: 'S-Box T2', color: '#ec4899'}
+            ];
+
+            inputs.forEach((inp, idx) => {
+                ctx.shadowBlur = 10; ctx.shadowColor = inp.color;
+                ctx.fillStyle = '#1e293b'; ctx.strokeStyle = inp.color;
+                ctx.lineWidth = 2;
+                ctx.fillRect(inp.x - 40, inp.y - 30, 80, 60);
+                ctx.strokeRect(inp.x - 40, inp.y - 30, 80, 60);
+                
+                ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(inp.label, inp.x, inp.y + 5);
+                
+                // Texto de "Mutação"
+                if(idx > 0 && algoFrames % 60 < 30) {
+                    ctx.fillStyle = '#f59e0b'; ctx.font = '10px Arial';
+                    ctx.fillText("Mutando...", inp.x, inp.y + 20);
+                }
+
+                if (algoFrames % 40 === 0) {
+                    particles.push({
+                        x: inp.x + 40, y: inp.y,
+                        targetX: w/2 - 60, targetY: h/2 + (idx - 1) * 20,
+                        color: inp.color, stage: 1, speed: 4
+                    });
+                }
+            });
+
+            // 3. Processador Central (Mixer)
+            const sBoxX = w/2; const sBoxY = h/2; const sBoxSize = 140;
+            ctx.save(); ctx.translate(sBoxX, sBoxY);
+            const scale = 1 + Math.sin(algoFrames * 0.05) * 0.02;
+            ctx.scale(scale, scale);
+            
+            ctx.shadowBlur = 20; ctx.shadowColor = '#10b981';
+            ctx.fillStyle = '#064e3b'; ctx.fillRect(-sBoxSize/2, -sBoxSize/2, sBoxSize, sBoxSize);
+            ctx.strokeStyle = '#34d399'; ctx.strokeRect(-sBoxSize/2, -sBoxSize/2, sBoxSize, sBoxSize);
+
+            ctx.shadowBlur = 0;
+            const cellSize = sBoxSize / 8;
+            for(let r=0; r<8; r++) {
+                for(let c=0; c<8; c++) {
+                    if(Math.random() > 0.95) sBoxState[r*8+c] = Math.random();
+                    ctx.fillStyle = `rgba(52, 211, 153, ${sBoxState[r*8+c] * 0.6})`;
+                    ctx.fillRect(-sBoxSize/2 + c*cellSize + 1, -sBoxSize/2 + r*cellSize + 1, cellSize-2, cellSize-2);
+                }
+            }
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial';
+            ctx.fillText("XOR & Swap", 0, sBoxSize/2 + 20);
+            ctx.restore();
+
+            // 4. Saída
+            const targetX = w - 100; const targetY = h/2;
+            ctx.shadowBlur = 15; ctx.shadowColor = '#f59e0b';
+            ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3;
+            ctx.fillRect(targetX - 50, targetY - 50, 100, 100);
+            ctx.strokeRect(targetX - 50, targetY - 50, 100, 100);
+
+            const randomHex = Math.floor(Math.random()*255).toString(16).toUpperCase().padStart(2, '0');
+            ctx.shadowBlur = 0; ctx.fillStyle = '#fcd34d'; ctx.font = 'bold 16px Courier New';
+            ctx.fillText("Hash Byte", targetX, targetY - 10);
+            ctx.font = '24px Courier New'; ctx.fillText("0x" + randomHex, targetX, targetY + 20);
+
+            // 5. Partículas
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                const dx = p.targetX - p.x; const dy = p.targetY - p.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < p.speed) {
+                    p.x = p.targetX; p.y = p.targetY;
+                    if (p.stage === 1) {
+                        p.stage = 2; p.targetX = targetX - 55; p.targetY = targetY + (Math.random() * 40 - 20); p.color = '#fff';
+                    } else if (p.stage === 2) {
+                        particles.splice(i, 1); continue;
+                    }
+                } else {
+                    p.x += (dx / dist) * p.speed; p.y += (dy / dist) * p.speed;
+                }
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
+            }
+
+            // Atualiza status textual
+            const statusEl = document.getElementById('algoStatus');
+            if(statusEl) statusEl.innerText = "Processando... T1/T2 sofrendo mutação...";
+
+            animId5 = requestAnimationFrame(drawAlgoAnim);
+        }
+
+        function startAlgoAnim() {
+            // Reinicia variáveis e garante que o loop comece
+            stopAlgoAnim(); 
+            algoFrames = 0;
+            particles = [];
+            drawAlgoAnim();
+        }
+
+        function stopAlgoAnim() {
+            if(animId5) {
+                cancelAnimationFrame(animId5);
+                animId5 = null;
+            }
+            const statusEl = document.getElementById('algoStatus');
+            if(statusEl) statusEl.innerText = "Parado";
+        }
+
+
+        // --- TTS Engine ---
+        let synth = window.speechSynthesis;
+        let utterance = null;
+        let isPlaying = false;
+        let resumeInterval;
+
+        function getTabContentText() {
+            const container = document.querySelector(`#${currentTabId} .content-text`);
+            const title = document.querySelector(`#${currentTabId} h2`).innerText;
+            if(!container) return title;
+            return (title + ". " + container.innerText).replace(/\s+/g, ' ').trim();
+        }
+
+        function toggleAudio() { isPlaying ? stopAudio() : playAudio(); }
+
+        function playAudio(startPercentage = 0) {
+            synth.cancel(); clearInterval(resumeInterval);
+            let text = getTabContentText();
+            let startIdx = Math.floor((startPercentage / 100) * text.length);
+            let chunk = text.substring(startIdx);
+            
+            if (!chunk) return;
+
+            utterance = new SpeechSynthesisUtterance(chunk);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 1.1; 
+            
+            utterance.onstart = () => {
+                isPlaying = true; updatePlayButton(true);
+                document.getElementById('status-text').innerText = "Lendo...";
+                // Fix para chrome
+                resumeInterval = setInterval(() => {
+                    if (!synth.speaking) clearInterval(resumeInterval);
+                    else { synth.pause(); synth.resume(); }
+                }, 10000);
+            };
+            utterance.onend = () => stopAudio();
+            utterance.onerror = () => stopAudio();
+            utterance.onboundary = (e) => {
+                if (e.name === 'word' || e.name === 'sentence') {
+                    let currentGlobalIndex = startIdx + e.charIndex;
+                    updateProgressBar((currentGlobalIndex / text.length) * 100);
+                }
+            };
+            setTimeout(() => synth.speak(utterance), 50);
+        }
+
+        function stopAudio() {
+            synth.cancel(); clearInterval(resumeInterval);
+            isPlaying = false; updatePlayButton(false);
+            document.getElementById('status-text').innerText = "Pronto para ler";
+        }
+
+        function seekAudio(value) { stopAudio(); setTimeout(() => playAudio(value), 100); }
+        function updatePlayButton(playing) {
+            const btn = document.getElementById('play-btn');
+            btn.innerHTML = playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-headphones"></i>';
+            if(playing) btn.classList.add('animate-pulse'); else btn.classList.remove('animate-pulse');
+        }
+        function updateProgressBar(percent) {
+            if(percent > 100) percent = 100;
+            document.getElementById('seek-bar').value = percent;
+            document.getElementById('progress-percent').innerText = Math.floor(percent) + "%";
+        }
+        function updateTooltip(val) { document.getElementById('progress-percent').innerText = Math.floor(val) + "%"; }
+        function resetPlayerUI() {
+            document.getElementById('seek-bar').value = 0;
+            document.getElementById('progress-percent').innerText = "0%";
+            document.getElementById('status-text').innerText = "Pronto para ler";
+            updatePlayButton(false);
+        }
+
+        window.onload = () => {
+            if (window.speechSynthesis) window.speechSynthesis.getVoices();
+            else document.getElementById('audio-player').style.display = 'none';
+        };
+    </script>
+</body>
+</html>
