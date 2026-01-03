@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorando SHA-3 (NIST FIPS 202)</title>
+    <!-- Importando Three.js para visualização 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #004494;
+            --accent-color: #ffd700;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --tab-bg: #e0e0e0;
+            --tab-active: #fff;
+            --card-bg: #fff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        header p {
+            margin: 5px 0 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        /* Layout Principal */
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 15px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        /* Navegação por Abas */
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            background-color: var(--tab-bg);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .tab-btn {
+            background-color: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 20px;
+            transition: 0.3s;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .tab-btn:hover {
+            background-color: #d1d1d1;
+            color: #000;
+        }
+
+        .tab-btn.active {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            border-top: 3px solid var(--primary-color);
+            border-bottom: 3px solid var(--card-bg); /* Esconde a borda inferior do container */
+            margin-bottom: -2px;
+        }
+
+        /* Conteúdo das Abas */
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilos de Texto e Componentes */
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: var(--secondary-color);
+            margin-top: 25px;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #856404;
+        }
+
+        .info-box {
+            background-color: #e8f4fd;
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .comparison-table th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        /* Botão de Áudio e Slider */
+        .audio-controls {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .btn-audio {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            transition: background 0.3s;
+            flex-shrink: 0;
+        }
+
+        .btn-audio:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-stop {
+            background-color: #dc3545;
+        }
+        
+        .btn-stop:hover {
+            background-color: #a71d2a;
+        }
+
+        /* Estilização do Slider */
+        .slider-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        .audio-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+            transition: opacity .2s;
+        }
+
+        .audio-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+
+        .audio-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+
+        /* Visualização do Estado (3D Container) */
+        #keccak-3d-container {
+            width: 100%;
+            height: 400px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+            cursor: move; /* Indica que é interagível */
+        }
+        
+        #keccak-3d-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            color: #555;
+            pointer-events: none;
+        }
+        
+        /* Steps visualization */
+        .step-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .step-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .step-symbol {
+            font-family: 'Times New Roman', serif;
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            .tab-btn {
+                text-align: left;
+                border-bottom: 1px solid #ccc;
+            }
+            .tab-btn.active {
+                border-left: 4px solid var(--primary-color);
+                border-top: none;
+            }
+            .audio-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>SHA-3: O Padrão de Hash de Próxima Geração</h1>
+    <p>Baseado no NIST FIPS PUB 202</p>
+</header>
+
+<div class="container">
+    <!-- Navegação -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'tab1')">1. O que é Hash</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab2')">2. Lógica SHA-3</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab3')">3. Esponja vs Merkle</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab4')">4. Tipos</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab5')">5. Algoritmo</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab6')">6. Segurança</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab7')">7. Parâmetros</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab8')">8. Considerações</button>
+    </div>
+
+    <!-- ABA 1: O que é um Hash -->
+    <div id="tab1" class="tab-content" style="display: block;">
+        <h2>O que é uma Função de Hash?</h2>
+        <p>Uma função de hash (ou resumo criptográfico) é um algoritmo matemático que mapeia dados de comprimento variável para dados de comprimento fixo.</p>
+        
+        <div class="info-box">
+            <strong>Conceito Chave:</strong> Imagine um liquidificador digital. Você pode colocar uma fruta ou um caminhão de frutas dentro (Input), mas o copo resultante será sempre do mesmo tamanho (Output/Digest).
+        </div>
+
+        <h3>Características Principais:</h3>
+        <ul>
+            <li><strong>Determinística:</strong> A mesma entrada sempre produz a mesma saída.</li>
+            <li><strong>Efeito Avalanche:</strong> Mudar um único bit na entrada muda drasticamente a saída (aproximadamente 50% dos bits).</li>
+            <li><strong>Imagem Inversa (Preimage):</strong> É computacionalmente inviável recuperar a mensagem original a partir do hash.</li>
+            <li><strong>Resistência a Colisões:</strong> É inviável encontrar duas mensagens diferentes que produzam o mesmo hash.</li>
+        </ul>
+        <p>O FIPS 202 padroniza o SHA-3 para complementar as famílias SHA-1 e SHA-2, garantindo robustez a longo prazo.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab1')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab1" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab1')" onchange="seekAudio(this.value, 'tab1')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 2: Lógica SHA-3 -->
+    <div id="tab2" class="tab-content">
+        <h2>A Lógica do SHA-3 (Keccak)</h2>
+        <p>O SHA-3 não é apenas uma atualização do SHA-2; é uma arquitetura fundamentalmente diferente. O algoritmo vencedor da competição do NIST foi o <strong>KECCAK</strong>.</p>
+
+        <h3>Baseado em Permutações</h3>
+        <p>Diferente de seus antecessores, o SHA-3 é baseado em <strong>permutações criptográficas</strong> fixas, especificamente a família KECCAK-p. Pense nisso como embaralhar um baralho de cartas de uma maneira muito específica e irreversível.</p>
+
+        <div class="info-box">
+            O "coração" do SHA-3 é uma função de permutação chamada <strong>Keccak-f[1600]</strong>, que processa um estado interno de 1600 bits repetidamente através de várias rodadas (rounds).
+        </div>
+
+        <p>O objetivo foi criar diversidade no design criptográfico. Se um ataque matemático for descoberto contra o SHA-2 (que usa a estrutura Merkle-Damgård), o SHA-3 permanecerá seguro pois sua lógica interna é completamente distinta.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab2')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab2" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab2')" onchange="seekAudio(this.value, 'tab2')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 3: Esponja vs Merkle -->
+    <div id="tab3" class="tab-content">
+        <h2>Construção de Esponja vs. Merkle-Damgård</h2>
+        
+        <h3>O Passado: Merkle-Damgård (MD)</h3>
+        <p>SHA-1 e SHA-2 usam a construção MD. Nela, a mensagem é quebrada em blocos e processada sequencialmente, onde a saída de um bloco alimenta a entrada do próximo. Isso tem vulnerabilidades conhecidas, como ataques de extensão de comprimento.</p>
+
+        <h3>O Presente: A Esponja (Sponge Construction)</h3>
+        <p>O SHA-3 usa a construção de "Esponja". Ela funciona em duas fases distintas:</p>
+        
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px;">
+            <div style="flex: 1; background: #e3f2fd; padding: 15px; border-radius: 8px;">
+                <h4>1. Absorção (Absorbing)</h4>
+                <p>A mensagem é "absorvida" no estado interno da esponja. Os bits da mensagem são combinados (XOR) com parte do estado, e então a função de permutação embaralha tudo.</p>
+            </div>
+            <div style="flex: 1; background: #fff3e0; padding: 15px; border-radius: 8px;">
+                <h4>2. Espremedura (Squeezing)</h4>
+                <p>Após absorver toda a mensagem, o algoritmo "espreme" a esponja para gerar a saída. Se precisarmos de um hash maior (como num XOF), continuamos espremendo.</p>
+            </div>
+        </div>
+
+        <p style="margin-top: 20px">Isso permite flexibilidade total: a entrada pode ter qualquer tamanho e a saída também (no caso das funções SHAKE), diferente do tamanho fixo rígido das abordagens anteriores.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab3')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab3" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab3')" onchange="seekAudio(this.value, 'tab3')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 4: Tipos de SHA-3 -->
+    <div id="tab4" class="tab-content">
+        <h2>A Família SHA-3</h2>
+        <p>O padrão FIPS 202 define seis funções principais. Quatro são substitutos diretos para a família SHA-2, e duas são funções de saída estendida (XOFs).</p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Função</th>
+                    <th>Tamanho da Saída (bits)</th>
+                    <th>Uso Principal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>SHA3-224</strong></td>
+                    <td>224</td>
+                    <td>Assinaturas digitais legadas, compatibilidade.</td>
+                </tr>
+                <tr>
+                    <td><strong>SHA3-256</strong></td>
+                    <td>256</td>
+                    <td>Padrão ouro de segurança atual. Uso geral.</td>
+                </tr>
+                <tr>
+                    <td><strong>SHA3-384</strong></td>
+                    <td>384</td>
+                    <td>Alta segurança (nível militar/governamental).</td>
+                </tr>
+                <tr>
+                    <td><strong>SHA3-512</strong></td>
+                    <td>512</td>
+                    <td>Segurança máxima, computação quântica.</td>
+                </tr>
+                <tr>
+                    <td><strong>SHAKE128</strong></td>
+                    <td>Variável (d)</td>
+                    <td>XOF. Gera saídas de qualquer tamanho.</td>
+                </tr>
+                <tr>
+                    <td><strong>SHAKE256</strong></td>
+                    <td>Variável (d)</td>
+                    <td>XOF. Maior resistência a colisões que o 128.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p><strong>Nota:</strong> As funções SHAKE (Secure Hash Algorithm KECCAK) permitem que o desenvolvedor escolha o tamanho do hash final, útil para gerar chaves criptográficas ou máscaras de dados.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab4')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab4" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab4')" onchange="seekAudio(this.value, 'tab4')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 5: O Algoritmo -->
+    <div id="tab5" class="tab-content">
+        <h2>Entendendo o Algoritmo (Keccak-f)</h2>
+        <p>O algoritmo opera sobre uma matriz tridimensional de bits (Estado) de tamanho 5 x 5 x 64 (totalizando 1600 bits).</p>
+
+        <!-- Container para Three.js -->
+        <div id="keccak-3d-container">
+            <div id="keccak-3d-hint">Clique e arraste para rotacionar o Estado 5x5</div>
+        </div>
+        
+        <p style="text-align: center; font-size: 0.9rem; color: #666;">
+            A visualização acima mostra o Estado Keccak como uma matriz 5x5 de "lanes" (cubos alongados).<br>
+            Cada lane contém 64 bits de profundidade (w=64).
+        </p>
+
+        <h3>As 5 Etapas da Rodada (Step Mappings)</h3>
+        <p>Em cada rodada (são 24 rodadas no total para o SHA-3 padrão), o estado passa por 5 transformações, nomeadas com letras gregas:</p>
+
+        <ul class="step-list">
+            <li class="step-card">
+                <span class="step-symbol">θ</span>
+                <strong>Theta</strong>
+                <p>Mistura e difusão. Calcula a paridade das colunas vizinhas.</p>
+            </li>
+            <li class="step-card">
+                <span class="step-symbol">ρ</span>
+                <strong>Rho</strong>
+                <p>Rotação de bits dentro das "lanes" (deslocamento).</p>
+            </li>
+            <li class="step-card">
+                <span class="step-symbol">π</span>
+                <strong>Pi</strong>
+                <p>Permutação das posições das lanes (rearranjo espacial).</p>
+            </li>
+            <li class="step-card">
+                <span class="step-symbol">χ</span>
+                <strong>Chi</strong>
+                <p>Não-linearidade. Combina bits de uma linha usando operações lógicas (AND/NOT).</p>
+            </li>
+            <li class="step-card">
+                <span class="step-symbol">ι</span>
+                <strong>Iota</strong>
+                <p>Adiciona uma constante de rodada para quebrar a simetria.</p>
+            </li>
+        </ul>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab5')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab5" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab5')" onchange="seekAudio(this.value, 'tab5')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 6: Níveis de Segurança -->
+    <div id="tab6" class="tab-content">
+        <h2>Provas de Segurança</h2>
+        <p>O SHA-3 foi desenhado para resistir aos ataques conhecidos da criptografia moderna. A tabela abaixo mostra a força de segurança em bits.</p>
+
+        <div class="info-box">
+            Se uma função tem 128 bits de segurança, significa que um atacante precisaria realizar aproximadamente 2<sup>128</sup> operações para quebrá-la.
+        </div>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Função</th>
+                    <th>Resistência a Colisão</th>
+                    <th>Resistência a Preimage (Imagem Inversa)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>SHA3-224</td>
+                    <td>112 bits</td>
+                    <td>224 bits</td>
+                </tr>
+                <tr>
+                    <td>SHA3-256</td>
+                    <td>128 bits</td>
+                    <td>256 bits</td>
+                </tr>
+                <tr>
+                    <td>SHA3-384</td>
+                    <td>192 bits</td>
+                    <td>384 bits</td>
+                </tr>
+                <tr>
+                    <td>SHA3-512</td>
+                    <td>256 bits</td>
+                    <td>512 bits</td>
+                </tr>
+                <tr>
+                    <td>SHAKE128</td>
+                    <td>min(d/2, 128)</td>
+                    <td>min(d, 128)</td>
+                </tr>
+                <tr>
+                    <td>SHAKE256</td>
+                    <td>min(d/2, 256)</td>
+                    <td>min(d, 256)</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p><strong>Nota:</strong> Para as funções SHAKE, 'd' é o tamanho da saída escolhido. Elas são projetadas para fornecer segurança proporcional ao tamanho solicitado, até o limite de 128 ou 256 bits.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab6')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab6" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab6')" onchange="seekAudio(this.value, 'tab6')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 7: Parametrização -->
+    <div id="tab7" class="tab-content">
+        <h2>Parametrização: Rate e Capacity</h2>
+        <p>A estrutura de esponja do Keccak depende de dois parâmetros fundamentais que dividem o estado de 1600 bits:</p>
+
+        <ul style="font-size: 1.1rem;">
+            <li><strong>Rate (<i>r</i>):</strong> A parte do estado onde os dados são escritos e lidos. Define a velocidade (maior <i>r</i> = mais rápido).</li>
+            <li><strong>Capacity (<i>c</i>):</strong> A parte do estado que o usuário nunca toca diretamente. Define a segurança (maior <i>c</i> = mais seguro).</li>
+        </ul>
+
+        <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0; font-size: 1.2rem;">
+            <em>b</em> = <em>r</em> + <em>c</em> = 1600 bits
+        </div>
+
+        <p>Para cada variante do SHA-3, a relação muda:</p>
+        
+        <ul>
+            <li><strong>SHA3-256:</strong> A capacidade (<i>c</i>) é definida como o dobro do tamanho do digest (512 bits). Logo, a taxa (<i>r</i>) é 1600 - 512 = 1088.</li>
+            <li><strong>SHA3-512:</strong> A capacidade (<i>c</i>) é 1024 bits. A taxa (<i>r</i>) cai para 576. Isso torna o SHA3-512 mais lento que o SHA3-256, pois processa menos bits por rodada, mas é mais seguro.</li>
+        </ul>
+
+        <p>Essa troca (Trade-off) entre performance e segurança é uma característica chave da parametrização do Keccak.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab7')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab7" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab7')" onchange="seekAudio(this.value, 'tab7')">
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 8: Considerações Finais -->
+    <div id="tab8" class="tab-content">
+        <h2>Considerações Finais e Implementação</h2>
+        
+        <h3>Separação de Domínio</h3>
+        <p>O SHA-3 utiliza sufixos (bits adicionados ao final da mensagem) para garantir que o hash de uma mensagem usando SHA3-256 seja matematicamente diferente da mesma mensagem usando SHAKE256.</p>
+        <ul>
+            <li><strong>SHA-3 Hash:</strong> Adiciona o sufixo <code>01</code>.</li>
+            <li><strong>SHAKE (XOF):</strong> Adiciona o sufixo <code>1111</code>.</li>
+        </ul>
+
+        <h3>Implementação em Hardware</h3>
+        <p>O SHA-3 foi projetado para ser eficiente em hardware (silício). Operações como XOR, AND, NOT e rotações são triviais para processadores, tornando o SHA-3 performático tanto em smartcards pequenos quanto em servidores robustos.</p>
+
+        <h3>Conclusão</h3>
+        <p>O FIPS 202 estabelece o SHA-3 não como um substituto imediato obrigatório para o SHA-2 (que ainda é seguro), mas como uma alternativa robusta e fundamentalmente diferente para o futuro da segurança da informação.</p>
+
+        <div class="audio-controls">
+            <button class="btn-audio" onclick="readTab('tab8')">🔊 Ouvir</button>
+            <button class="btn-audio btn-stop" onclick="stopAudio()">⏹ Parar</button>
+            <div class="slider-container">
+                <span style="font-size: 0.8rem; color: #666;">Progresso:</span>
+                <input type="range" class="audio-slider" id="slider-tab8" min="0" max="100" value="0" oninput="seekAudio(this.value, 'tab8')" onchange="seekAudio(this.value, 'tab8')">
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Gerenciamento de Abas
+    function openTab(evt, tabName) {
+        // Para qualquer áudio que esteja tocando ao mudar de aba
+        stopAudio();
+
+        var i, tabContent, tabBtn;
+        
+        // Esconde todo o conteúdo
+        tabContent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabContent.length; i++) {
+            tabContent[i].style.display = "none";
+        }
+
+        // Remove a classe active dos botões
+        tabBtn = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tabBtn.length; i++) {
+            tabBtn[i].className = tabBtn[i].className.replace(" active", "");
+        }
+
+        // Mostra a aba atual e adiciona classe active
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+
+        // Inicializa Three.js se for a aba 5 e ainda não tiver sido iniciado
+        if (tabName === 'tab5' && !threeJsInitialized) {
+            initKeccak3D();
+        }
+    }
+
+    // Funcionalidade de Texto para Fala (TTS) com Seek
+    let synth = window.speechSynthesis;
+    let currentUtterance = null;
+    let currentFullText = ""; // Armazena o texto completo da aba atual
+    let currentTextOffset = 0; // Onde o utterance atual começou em relação ao full text
+    let isUserSeeking = false; // Flag para saber se o usuário está arrastando o slider
+
+    function readTab(tabId) {
+        // Se já estiver falando a mesma aba, não faz nada ou reinicia? Melhor reiniciar.
+        stopAudio();
+        
+        // Reset slider
+        const slider = document.getElementById('slider-' + tabId);
+        if(slider) slider.value = 0;
+
+        const tabElement = document.getElementById(tabId);
+        let textToRead = extractText(tabElement);
+
+        if (textToRead) {
+            currentFullText = textToRead;
+            currentTextOffset = 0;
+            speakSegment(textToRead, tabId);
+        }
+    }
+
+    function extractText(element) {
+        let text = "";
+        const textElements = element.querySelectorAll('h2, h3, h4, p, li, td, th');
+        textElements.forEach(el => {
+            if (!el.classList.contains('btn-audio') && !el.closest('.audio-controls') && !el.closest('#keccak-3d-hint')) {
+                text += el.innerText + ". ";
+            }
+        });
+        return text.replace(/\s+/g, ' ').trim();
+    }
+
+    function speakSegment(text, tabId) {
+        if (!text) return;
+
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = 'pt-BR';
+        currentUtterance.rate = 1.0;
+
+        // Evento disparado a cada palavra/frase falada
+        currentUtterance.onboundary = function(event) {
+            if (!isUserSeeking) {
+                const slider = document.getElementById('slider-' + tabId);
+                if (slider && currentFullText.length > 0) {
+                    // O charIndex é relativo ao segmento atual. Somamos o offset para ter a posição global.
+                    const globalIndex = currentTextOffset + event.charIndex;
+                    const percentage = (globalIndex / currentFullText.length) * 100;
+                    slider.value = percentage;
+                }
+            }
+        };
+
+        currentUtterance.onend = function() {
+            // Se chegou ao fim naturalmente, zera o slider (opcional)
+            // currentUtterance = null; 
+        };
+
+        synth.speak(currentUtterance);
+    }
+
+    // Função chamada quando o usuário mexe no slider
+    function seekAudio(value, tabId) {
+        // Marca que o usuário está mexendo para o onboundary não ficar brigando com o mouse
+        isUserSeeking = true;
+        
+        // Cancela o áudio atual
+        if (synth.speaking) {
+            synth.cancel();
+        }
+
+        // Se não tivermos texto carregado (ex: usuário mexeu no slider antes de dar play), extrai agora
+        if (!currentFullText) {
+             const tabElement = document.getElementById(tabId);
+             currentFullText = extractText(tabElement);
+        }
+
+        if (currentFullText) {
+            // Calcula o índice de caractere baseado na porcentagem
+            const targetIndex = Math.floor((value / 100) * currentFullText.length);
+            
+            // Encontra o início da frase mais próxima para não começar no meio de uma palavra
+            const startIndex = findNearestSentenceStart(currentFullText, targetIndex);
+            
+            // Define o novo offset
+            currentTextOffset = startIndex;
+            
+            // Cria o novo segmento de texto
+            const textSegment = currentFullText.substring(startIndex);
+            
+            // Fala
+            speakSegment(textSegment, tabId);
+            
+            // Libera a atualização do slider após um breve delay
+            setTimeout(() => { isUserSeeking = false; }, 500);
+        }
+    }
+
+    // Encontra pontuação anterior para começar a fala de forma natural
+    function findNearestSentenceStart(text, index) {
+        if (index <= 0) return 0;
+        
+        // Procura para trás um ponto final, interrogação ou exclamação
+        // Limitamos a busca a 200 caracteres para trás para não travar
+        const searchWindow = text.substring(Math.max(0, index - 200), index);
+        
+        // Regex para encontrar pontuação seguida de espaço ou final de linha
+        // A lógica simples aqui é buscar a última ocorrência de '. '
+        const lastPeriod = searchWindow.lastIndexOf('. ');
+        const lastQuestion = searchWindow.lastIndexOf('? ');
+        const lastExclaim = searchWindow.lastIndexOf('! ');
+        
+        let maxIndex = Math.max(lastPeriod, lastQuestion, lastExclaim);
+        
+        if (maxIndex === -1) {
+            // Se não achou pontuação perto, tenta começar do início da janela ou do próprio index se for início absoluto
+            return Math.max(0, index - 200); 
+        }
+        
+        // O índice retornado é relativo à janela. Precisamos converter para índice absoluto.
+        // Adicionamos +2 para pular o ponto e o espaço.
+        const absoluteIndex = Math.max(0, index - 200) + maxIndex + 2;
+        
+        return absoluteIndex;
+    }
+
+    function stopAudio() {
+        if (synth.speaking || synth.pending) {
+            synth.cancel();
+            currentUtterance = null;
+            // Não limpamos currentFullText para permitir seek mesmo parado
+        }
+    }
+
+    // Garante que o áudio pare se a página for fechada
+    window.onbeforeunload = function() {
+        stopAudio();
+    };
+
+    /* ---------------------------------------------------- */
+    /* LÓGICA THREE.JS PARA VISUALIZAÇÃO 3D (ABA 5)        */
+    /* ---------------------------------------------------- */
+    
+    let threeJsInitialized = false;
+    let scene, camera, renderer, cubesGroup;
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    function initKeccak3D() {
+        const container = document.getElementById('keccak-3d-container');
+        if (!container) return;
+
+        // 1. Cena
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0); // Cor de fundo suave
+
+        // 2. Câmera
+        const aspect = container.clientWidth / container.clientHeight;
+        camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+        camera.position.set(0, 5, 12);
+        camera.lookAt(0, 0, 0);
+
+        // 3. Renderizador
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // 4. Luzes
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 7);
+        scene.add(directionalLight);
+
+        // 5. Grid 5x5 de Cubos (Lanes)
+        cubesGroup = new THREE.Group();
+        
+        const laneSize = 1;
+        const laneSpacing = 1.2;
+        const laneDepth = 4; // Representando os 64 bits de profundidade como um comprimento maior
+
+        const geometry = new THREE.BoxGeometry(laneSize, laneDepth, laneSize);
+        
+        for (let x = 0; x < 5; x++) {
+            for (let y = 0; y < 5; y++) {
+                // Criar material
+                // Lane central (2,2) em destaque
+                const isCenter = (x === 2 && y === 2);
+                const color = isCenter ? 0xffd700 : 0x0056b3; 
+                const opacity = isCenter ? 0.9 : 0.7;
+
+                const material = new THREE.MeshLambertMaterial({ 
+                    color: color, 
+                    transparent: true, 
+                    opacity: opacity 
+                });
+
+                const cube = new THREE.Mesh(geometry, material);
+
+                // Posicionar no grid
+                // Centralizar o grid no mundo (offset de -2 unidades)
+                const posX = (x - 2) * laneSpacing;
+                const posZ = (y - 2) * laneSpacing;
+                
+                cube.position.set(posX, 0, posZ);
+                
+                // Adicionar bordas para melhor visualização
+                const edges = new THREE.EdgesGeometry(geometry);
+                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+                cube.add(line);
+
+                cubesGroup.add(cube);
+            }
+        }
+
+        scene.add(cubesGroup);
+
+        // 6. Eventos de Mouse (Rotação Simples)
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            isDragging = true;
+        });
+        
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaMove = {
+                    x: e.offsetX - previousMousePosition.x,
+                    y: e.offsetY - previousMousePosition.y
+                };
+
+                const deltaRotationQuaternion = new THREE.Quaternion()
+                    .setFromEuler(new THREE.Euler(
+                        toRadians(deltaMove.y * 1),
+                        toRadians(deltaMove.x * 1),
+                        0,
+                        'XYZ'
+                    ));
+
+                cubesGroup.quaternion.multiplyQuaternions(deltaRotationQuaternion, cubesGroup.quaternion);
+            }
+            previousMousePosition = {
+                x: e.offsetX,
+                y: e.offsetY
+            };
+        });
+
+        // Eventos globais para soltar o mouse
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        // Touch support básico
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }, {passive: false});
+
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                e.preventDefault(); // Evita scroll
+                const currentX = e.touches[0].clientX;
+                const currentY = e.touches[0].clientY;
+                
+                const deltaX = currentX - previousMousePosition.x;
+                const deltaY = currentY - previousMousePosition.y;
+
+                cubesGroup.rotation.y += deltaX * 0.01;
+                cubesGroup.rotation.x += deltaY * 0.01;
+
+                previousMousePosition = { x: currentX, y: currentY };
+            }
+        }, {passive: false});
+        
+        window.addEventListener('touchend', () => isDragging = false);
+
+        // Animação inicial
+        cubesGroup.rotation.x = 0.5;
+        cubesGroup.rotation.y = 0.5;
+
+        threeJsInitialized = true;
+        animate();
+    }
+
+    function toRadians(angle) {
+        return angle * (Math.PI / 180);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // Rotação automática suave se não estiver arrastando
+        if (!isDragging && cubesGroup) {
+            cubesGroup.rotation.y += 0.002;
+        }
+
+        if (renderer && scene && camera) {
+            renderer.render(scene, camera);
+        }
+    }
+
+    // Ajustar tamanho ao redimensionar janela
+    window.addEventListener('resize', () => {
+        const container = document.getElementById('keccak-3d-container');
+        if (container && renderer && camera) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+    });
+
+</script>
+
+</body>
+</html>
